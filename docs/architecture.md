@@ -1,32 +1,47 @@
 # Architecture
 
-Mithril Veil is a local-first HTTP service that detects Russian PII in text and returns anonymized output suitable for LLM workflows.
+Mithril Veil is a local-first service that detects Russian PII in text and returns anonymized output suitable for LLM workflows.
 
-## Components
+## Layers
 
-- **API** (`app/api/`): FastAPI routes for health and anonymization
-- **Entities** (`app/core/entities.py`): Internal `DetectedEntity` model with priority, confidence, metadata
-- **Validators** (`app/detectors/validators.py`): INN/SNILS checksums and digit normalization
-- **Pipeline** (`app/core/pipeline.py`): Detection → merge → anonymize → summary
-- **Detectors** (`app/detectors/`): Regex recognizers (deterministic, no ML in this layer)
-- **Span merger** (`app/core/span_merger.py`): Priority / length / confidence overlap resolution
-- **Presets** (`app/presets/`): YAML entity-type profiles (not yet wired)
-- **Security** (`app/security/`): Retention and audit policy hooks
+| Layer | Location | Role |
+|-------|----------|------|
+| **API** | `app/api/` | FastAPI HTTP endpoints |
+| **CLI** | `app/cli/` | `mithril-veil` commands for text, stdin, and files |
+| **Document I/O** | `app/document_io/` | Safe UTF-8 read/write for `.txt` / `.md` (stubs for DOCX/PDF) |
+| **Pipeline** | `app/core/pipeline.py` | Shared detection → merge → anonymize flow |
+| **Detectors** | `app/detectors/` | Deterministic regex recognizers (no ML in this slice) |
+| **Security** | `app/security/` | Retention and audit policy hooks |
+
+## No-storage-by-default
+
+By default the service does not persist original documents or detected values. The CLI writes only what you explicitly request (`--output`, `--report`). Policy defaults in `app/core/policies.py` forbid logging raw text or entity values.
 
 ## Deterministic detection pipeline
 
 ```
-POST /api/v1/anonymize
+Input (HTTP body | CLI text | file contents)
   → regex detectors (per entity type)
   → checksum / context gates (INN, SNILS)
   → merge_entities (priority, length, confidence)
   → anonymizer (replace | redact)
-  → API mapping (strip internal text; mask value_preview)
-  → detection summary (counts by type and detector)
+  → safe response mapping (strip internal text; mask value_preview)
+  → summary / optional JSON report
 ```
 
-Internal `DetectedEntity.text` is used only inside the process. It must not be logged or returned in JSON responses.
+Internal `DetectedEntity.text` is used only in-process. It must not be logged, printed, or written to API/CLI reports.
+
+## CLI file flow
+
+```
+mithril-veil anonymize-file
+  → validate paths (no input overwrite; --force for existing outputs)
+  → read_text_file (.txt | .md | .markdown)
+  → run_anonymization (same as API)
+  → write_text_file (anonymized output)
+  → optional write_anonymization_report (safe JSON)
+```
 
 ## Deployment
 
-Run with Uvicorn behind your reverse proxy on a VPS or locally. See [deployment_vps.md](deployment_vps.md).
+Run the API with Uvicorn behind a reverse proxy, or use the CLI locally/on a VPS. See [deployment_vps.md](deployment_vps.md).

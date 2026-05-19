@@ -6,15 +6,16 @@
 - [x] Deterministic detection hardening (entity model, priorities, checksums, summary)
 - [x] Replace and redact modes
 - [x] Health and anonymize API
+- [x] **Slice 3: CLI and safe text document ingestion** (`.txt`, `.md`, `.markdown`, JSON reports)
 - [x] Synthetic test fixtures only
 
 ## Next
 
 - Preset-driven entity selection
 - OGRN/OGRNIP/BANK_ACCOUNT checksum validation
+- DOCX and PDF document ingestion
 - Local NER for PERSON / ORGANIZATION / ADDRESS
-- Document ingestion (txt, then reviewed formats)
-- CLI batch mode
+- CLI batch / directory mode
 
 ## Later
 

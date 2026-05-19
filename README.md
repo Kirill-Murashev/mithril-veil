@@ -6,17 +6,19 @@ Detect and anonymize sensitive information in Russian text before sending it to 
 
 ## Warning
 
-**Do not commit real PII** to this repository — no real names, documents, bank data, passports, INN/SNILS, addresses, or reversible mapping files. Use synthetic fixtures only. See [SECURITY.md](SECURITY.md).
+**Do not commit real PII** to this repository — no real names, documents, bank data, passports, INN/SNILS, addresses, or reversible mapping files. Use synthetic fixtures only. Do not paste real documents into issues, tests, or examples. See [SECURITY.md](SECURITY.md).
 
 ## Features (0.1.x)
 
 - FastAPI HTTP API with health check and text anonymization
+- **CLI** for text, stdin, and file-based anonymization with safe JSON reports
+- **Text document I/O** for `.txt`, `.md`, and `.markdown` (DOCX/PDF planned, not yet implemented)
 - Deterministic regex detectors: email, phone, INN, SNILS, passport, OGRN/OGRNIP, KPP, BIK, bank/correspondent accounts, cards, cadastral/court/contract numbers, IP, URL, Telegram handles
 - INN/SNILS checksum validation with context-aware weak candidates
 - Priority-based span merging with confidence tie-breaking
-- Detection summary (`entity_counts`, `detectors`) in anonymize responses
+- Detection summary (`entity_counts`, `detectors`) in API and CLI reports
 - Modes: `replace` (typed placeholders) and `redact`
-- API responses never include original detected values (`value_preview` is always masked)
+- API/CLI never expose original detected values (`value_preview` is always masked)
 
 ## Requirements
 
@@ -32,6 +34,31 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env   # optional
 ```
+
+## CLI
+
+After editable install, the `mithril-veil` command is available:
+
+```bash
+mithril-veil version
+# Mithril Veil 0.1.0
+
+mithril-veil anonymize-text --text "Контакт: test@example.local" --mode replace
+
+echo "Контакт: test@example.local" | mithril-veil anonymize-stdin --mode replace
+
+mithril-veil anonymize-file \
+  --input examples/synthetic_input.txt \
+  --output /tmp/anonymized.txt \
+  --mode replace \
+  --report /tmp/report.json
+```
+
+- Supported input formats: `.txt`, `.md`, `.markdown`
+- `.docx` and `.pdf` are **planned** but not implemented in this release
+- The CLI refuses to overwrite the input file (`--output` must differ from `--input`)
+- Use `--force` to overwrite an existing output or report file
+- JSON reports never contain raw detected values
 
 ## Running the API
 
@@ -61,7 +88,9 @@ Example response shape:
       "end": 0,
       "value_preview": "***",
       "replacement": "[EMAIL_1]",
-      "detector": "regex"
+      "detector": "regex",
+      "confidence": 0.85,
+      "metadata": {}
     }
   ],
   "warnings": [],
@@ -99,7 +128,7 @@ pytest
 
 ## Roadmap
 
-See [docs/roadmap.md](docs/roadmap.md) — presets, checksum validation, local NER, document ingestion, encrypted reversible mapping.
+See [docs/roadmap.md](docs/roadmap.md) — presets, NER, DOCX/PDF ingestion, encrypted reversible mapping.
 
 ## License
 
