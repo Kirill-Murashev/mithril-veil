@@ -1,5 +1,5 @@
-from app.core.schemas import AnonymizeMode, DetectedEntity
-from app.detectors.base import Span
+from app.core.entities import DetectedEntity, entity_to_api_dict
+from app.core.schemas import AnonymizeMode, DetectedEntityResponse
 
 MASK_PREVIEW = "***"
 REDACTED = "[REDACTED]"
@@ -11,45 +11,47 @@ def _placeholder(entity_type: str, index: int) -> str:
 
 def anonymize(
     text: str,
-    spans: list[Span],
+    entities: list[DetectedEntity],
     mode: AnonymizeMode,
-) -> tuple[str, list[DetectedEntity]]:
+) -> tuple[str, list[DetectedEntityResponse]]:
     """
     Apply replacements right-to-left so indices stay valid.
     Deterministic counters per entity type for replace mode.
     """
-    if not spans:
+    if not entities:
         return text, []
 
     counters: dict[str, int] = {}
-    entities: list[DetectedEntity] = []
+    responses: list[DetectedEntityResponse] = []
+    replacements: list[tuple[int, int, str]] = []
 
-    ordered = sorted(spans, key=lambda s: s.start)
-    replacements: list[tuple[int, int, str, Span]] = []
-
-    for span in ordered:
-        counters[span.entity_type] = counters.get(span.entity_type, 0) + 1
-        idx = counters[span.entity_type]
+    ordered = sorted(entities, key=lambda e: e.start)
+    for entity in ordered:
+        counters[entity.type] = counters.get(entity.type, 0) + 1
+        idx = counters[entity.type]
 
         if mode == AnonymizeMode.REDACT:
             replacement = REDACTED
         else:
-            replacement = _placeholder(span.entity_type, idx)
+            replacement = _placeholder(entity.type, idx)
 
-        entities.append(
-            DetectedEntity(
-                type=span.entity_type,
-                start=span.start,
-                end=span.end,
+        payload = entity_to_api_dict(entity, replacement)
+        responses.append(
+            DetectedEntityResponse(
+                type=payload["type"],
+                start=payload["start"],
+                end=payload["end"],
                 value_preview=MASK_PREVIEW,
-                replacement=replacement,
-                detector=span.detector,
+                replacement=payload["replacement"],
+                detector=payload["detector"],
+                confidence=payload["confidence"],
+                metadata=payload["metadata"],
             )
         )
-        replacements.append((span.start, span.end, replacement, span))
+        replacements.append((entity.start, entity.end, replacement))
 
     result = text
-    for start, end, replacement, _ in sorted(replacements, key=lambda r: r[0], reverse=True):
+    for start, end, replacement in sorted(replacements, key=lambda r: r[0], reverse=True):
         result = result[:start] + replacement + result[end:]
 
-    return result, entities
+    return result, responses

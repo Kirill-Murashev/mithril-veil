@@ -1,44 +1,44 @@
-from app.detectors.base import Span
-
-# Higher number = higher priority when spans overlap
-ENTITY_PRIORITY: dict[str, int] = {
-    "PASSPORT_RU": 90,
-    "SNILS": 85,
-    "INN": 80,
-    "CADASTRAL_NUMBER": 75,
-    "COURT_CASE_NUMBER": 70,
-    "EMAIL": 50,
-    "PHONE": 50,
-}
+from app.core.entities import DetectedEntity
 
 
-def _span_length(span: Span) -> int:
-    return span.end - span.start
-
-
-def _priority(span: Span) -> int:
-    return ENTITY_PRIORITY.get(span.entity_type, 0)
-
-
-def _overlaps(a: Span, b: Span) -> bool:
+def _overlaps(a: DetectedEntity, b: DetectedEntity) -> bool:
     return a.start < b.end and b.start < a.end
 
 
-def merge_spans(spans: list[Span]) -> list[Span]:
-    """
-    Sort by start ascending, then longer span first.
-    Remove overlapping lower-priority spans; keep deterministic output.
-    """
-    if not spans:
-        return []
-
-    sorted_spans = sorted(
-        spans,
-        key=lambda s: (s.start, -_span_length(s), -_priority(s), s.entity_type),
+def _span_sort_key(entity: DetectedEntity) -> tuple:
+    return (
+        entity.start,
+        -entity.length,
+        -entity.priority,
+        -entity.confidence,
+        entity.type,
     )
 
-    kept: list[Span] = []
-    for candidate in sorted_spans:
+
+def _wins_over(candidate: DetectedEntity, existing: DetectedEntity) -> bool:
+    """Return True if candidate should replace existing on overlap."""
+    if candidate.priority != existing.priority:
+        return candidate.priority > existing.priority
+    if candidate.length != existing.length:
+        return candidate.length > existing.length
+    if candidate.confidence != existing.confidence:
+        return candidate.confidence > existing.confidence
+    return candidate.type < existing.type
+
+
+def merge_entities(entities: list[DetectedEntity]) -> list[DetectedEntity]:
+    """
+    Merge overlapping entities deterministically.
+
+    On overlap: higher priority, then longer span, then higher confidence.
+    """
+    if not entities:
+        return []
+
+    sorted_entities = sorted(entities, key=_span_sort_key)
+    kept: list[DetectedEntity] = []
+
+    for candidate in sorted_entities:
         discard = False
         to_remove: list[int] = []
 
@@ -46,18 +46,9 @@ def merge_spans(spans: list[Span]) -> list[Span]:
             if not _overlaps(candidate, existing):
                 continue
 
-            cand_pri = _priority(candidate)
-            exist_pri = _priority(existing)
-            cand_len = _span_length(candidate)
-            exist_len = _span_length(existing)
-
-            if cand_pri > exist_pri or (cand_pri == exist_pri and cand_len > exist_len):
+            if _wins_over(candidate, existing):
                 to_remove.append(i)
-            elif cand_pri < exist_pri or (cand_pri == exist_pri and cand_len < exist_len):
-                discard = True
-                break
             else:
-                # Same priority and length — keep earlier in sort order (existing)
                 discard = True
                 break
 
@@ -68,4 +59,8 @@ def merge_spans(spans: list[Span]) -> list[Span]:
             kept.pop(i)
         kept.append(candidate)
 
-    return sorted(kept, key=lambda s: (s.start, s.entity_type))
+    return sorted(kept, key=lambda e: (e.start, e.type))
+
+
+# Backward-compatible alias used during refactor
+merge_spans = merge_entities

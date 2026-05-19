@@ -1,8 +1,42 @@
 import re
 
-from app.detectors.base import BaseDetector, Span
+from app.core.entities import (
+    CONFIDENCE_DEFAULT,
+    CONFIDENCE_VALIDATED,
+    CONFIDENCE_WEAK,
+    DetectedEntity,
+)
+from app.detectors.base import BaseDetector
+from app.detectors.validators import (
+    has_keyword_context,
+    normalize_digits,
+    validate_inn,
+    validate_snils,
+)
 
-# Conservative MVP patterns — TODO: add checksum/validation for INN, SNILS, passport, etc.
+INN_CONTEXT = ("инн", "inn")
+SNILS_CONTEXT = ("снилс", "snils")
+
+
+def _entities_from_matches(
+    entity_type: str,
+    text: str,
+    pattern: re.Pattern[str],
+    *,
+    confidence: float = CONFIDENCE_DEFAULT,
+    metadata: dict[str, str | int | float | bool | None] | None = None,
+) -> list[DetectedEntity]:
+    return [
+        DetectedEntity.create(
+            entity_type,
+            m.start(),
+            m.end(),
+            m.group(),
+            confidence=confidence,
+            metadata=metadata,
+        )
+        for m in pattern.finditer(text)
+    ]
 
 
 class EmailDetector(BaseDetector):
@@ -12,102 +46,273 @@ class EmailDetector(BaseDetector):
         re.IGNORECASE,
     )
 
-    def detect(self, text: str) -> list[Span]:
-        return [
-            Span(self.entity_type, m.start(), m.end(), m.group(), "regex")
-            for m in self._pattern.finditer(text)
-        ]
+    def detect(self, text: str) -> list[DetectedEntity]:
+        return _entities_from_matches(self.entity_type, text, self._pattern)
 
 
 class PhoneDetector(BaseDetector):
     entity_type = "PHONE"
-    # Russian-style numbers: +7, 8, or 7 followed by 10 digits with optional separators
     _pattern = re.compile(
-        r"(?:\+7|8|7)[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}"
+        r"(?:\+7|8)[\s\-]?\(?\d{3}\)?[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}"
         r"|(?:\+7|8)[\s\-]?\d{10}"
+        r"|\b7\d{10}\b"
     )
 
-    def detect(self, text: str) -> list[Span]:
-        return [
-            Span(self.entity_type, m.start(), m.end(), m.group(), "regex")
-            for m in self._pattern.finditer(text)
-        ]
+    def detect(self, text: str) -> list[DetectedEntity]:
+        return _entities_from_matches(self.entity_type, text, self._pattern)
 
 
 class InnDetector(BaseDetector):
     entity_type = "INN"
-    # 10 digits (org) or 12 digits (individual) — word boundaries
     _pattern = re.compile(r"\b\d{10}\b|\b\d{12}\b")
 
-    def detect(self, text: str) -> list[Span]:
-        spans: list[Span] = []
+    def detect(self, text: str) -> list[DetectedEntity]:
+        entities: list[DetectedEntity] = []
         for m in self._pattern.finditer(text):
-            value = m.group()
-            # TODO: validate INN checksum before accepting
-            if len(value) in (10, 12):
-                spans.append(Span(self.entity_type, m.start(), m.end(), value, "regex"))
-        return spans
+            raw = m.group()
+            digits = normalize_digits(raw)
+            if len(digits) not in (10, 12):
+                continue
+            if validate_inn(digits):
+                entities.append(
+                    DetectedEntity.create(
+                        self.entity_type,
+                        m.start(),
+                        m.end(),
+                        raw,
+                        confidence=CONFIDENCE_VALIDATED,
+                        metadata={"checksum_valid": True},
+                    )
+                )
+            elif has_keyword_context(text, m.start(), INN_CONTEXT):
+                entities.append(
+                    DetectedEntity.create(
+                        self.entity_type,
+                        m.start(),
+                        m.end(),
+                        raw,
+                        confidence=CONFIDENCE_WEAK,
+                        metadata={"checksum_valid": False, "context_matched": True},
+                    )
+                )
+        return entities
 
 
 class SnilsDetector(BaseDetector):
     entity_type = "SNILS"
-    _pattern = re.compile(r"\b\d{3}[-\s]?\d{3}[-\s]?\d{3}[-\s]?\d{2}\b")
+    _pattern = re.compile(r"\b\d{3}[-\s]?\d{3}[-\s]?\d{3}[-\s]?\d{2}\b|\b\d{11}\b")
 
-    def detect(self, text: str) -> list[Span]:
-        return [
-            Span(self.entity_type, m.start(), m.end(), m.group(), "regex")
-            for m in self._pattern.finditer(text)
-        ]
-        # TODO: validate SNILS control number
+    def detect(self, text: str) -> list[DetectedEntity]:
+        entities: list[DetectedEntity] = []
+        for m in self._pattern.finditer(text):
+            raw = m.group()
+            digits = normalize_digits(raw)
+            if len(digits) != 11:
+                continue
+            if validate_snils(digits):
+                entities.append(
+                    DetectedEntity.create(
+                        self.entity_type,
+                        m.start(),
+                        m.end(),
+                        raw,
+                        confidence=CONFIDENCE_VALIDATED,
+                        metadata={"checksum_valid": True},
+                    )
+                )
+            elif has_keyword_context(text, m.start(), SNILS_CONTEXT):
+                entities.append(
+                    DetectedEntity.create(
+                        self.entity_type,
+                        m.start(),
+                        m.end(),
+                        raw,
+                        confidence=CONFIDENCE_WEAK,
+                        metadata={"checksum_valid": False, "context_matched": True},
+                    )
+                )
+        return entities
 
 
 class PassportRuDetector(BaseDetector):
     entity_type = "PASSPORT_RU"
-    # Series (4 digits) + number (6 digits), optional space
-    _pattern = re.compile(r"\b\d{2}\s?\d{2}\s?\d{6}\b")
+    # Require separator so plain 10-digit INN is not matched as passport series+number
+    _pattern = re.compile(r"\b\d{2}\s\d{2}\s\d{6}\b|\b\d{4}\s\d{6}\b")
 
-    def detect(self, text: str) -> list[Span]:
-        return [
-            Span(self.entity_type, m.start(), m.end(), m.group(), "regex")
-            for m in self._pattern.finditer(text)
-        ]
-        # TODO: validate passport series/number ranges
+    def detect(self, text: str) -> list[DetectedEntity]:
+        # TODO: validate passport series/number ranges and issue year
+        return _entities_from_matches(self.entity_type, text, self._pattern)
+
+
+class OgrnDetector(BaseDetector):
+    entity_type = "OGRN"
+    _pattern = re.compile(r"\b\d{13}\b")
+
+    def detect(self, text: str) -> list[DetectedEntity]:
+        # TODO: OGRN checksum validation
+        return _entities_from_matches(self.entity_type, text, self._pattern, confidence=0.8)
+
+
+class OgrnipDetector(BaseDetector):
+    entity_type = "OGRNIP"
+    _pattern = re.compile(r"\b\d{15}\b")
+
+    def detect(self, text: str) -> list[DetectedEntity]:
+        # TODO: OGRNIP checksum validation
+        return _entities_from_matches(self.entity_type, text, self._pattern, confidence=0.8)
+
+
+class KppDetector(BaseDetector):
+    entity_type = "KPP"
+    _pattern = re.compile(r"\b\d{9}\b")
+
+    def detect(self, text: str) -> list[DetectedEntity]:
+        entities: list[DetectedEntity] = []
+        for m in self._pattern.finditer(text):
+            if has_keyword_context(text, m.start(), ("кпп", "kpp")):
+                entities.append(
+                    DetectedEntity.create(
+                        self.entity_type,
+                        m.start(),
+                        m.end(),
+                        m.group(),
+                        confidence=0.85,
+                        metadata={"context_matched": True},
+                    )
+                )
+        return entities
+
+
+class BikDetector(BaseDetector):
+    entity_type = "BIK"
+    _pattern = re.compile(r"\b04\d{7}\b")
+
+    def detect(self, text: str) -> list[DetectedEntity]:
+        # TODO: verify BIK against Central Bank directory
+        return _entities_from_matches(self.entity_type, text, self._pattern)
+
+
+class BankAccountDetector(BaseDetector):
+    entity_type = "BANK_ACCOUNT"
+    _pattern = re.compile(r"\b\d{20}\b")
+
+    def detect(self, text: str) -> list[DetectedEntity]:
+        entities: list[DetectedEntity] = []
+        for m in self._pattern.finditer(text):
+            if has_keyword_context(
+                text,
+                m.start(),
+                ("р/с", "рс", "расчетный", "расчётный", "счет", "счёт", "account"),
+            ):
+                entities.append(
+                    DetectedEntity.create(
+                        self.entity_type,
+                        m.start(),
+                        m.end(),
+                        m.group(),
+                        confidence=0.88,
+                        metadata={"context_matched": True},
+                    )
+                )
+        return entities
+
+
+class CorrespondentAccountDetector(BaseDetector):
+    entity_type = "CORRESPONDENT_ACCOUNT"
+    _pattern = re.compile(r"\b301\d{17}\b")
+
+    def detect(self, text: str) -> list[DetectedEntity]:
+        # TODO: correspondent account checksum with BIK
+        return _entities_from_matches(self.entity_type, text, self._pattern)
+
+
+class CardNumberDetector(BaseDetector):
+    entity_type = "CARD_NUMBER"
+    _pattern = re.compile(r"\b(?:\d{4}[\s\-]?){3}\d{4}\b")
+
+    def detect(self, text: str) -> list[DetectedEntity]:
+        # TODO: Luhn validation
+        return _entities_from_matches(self.entity_type, text, self._pattern, confidence=0.75)
 
 
 class CadastralNumberDetector(BaseDetector):
     entity_type = "CADASTRAL_NUMBER"
-    # Format: XX:XX:XXXXXXX:XXXX (simplified)
     _pattern = re.compile(r"\b\d{2}:\d{2}:\d{6,7}:\d{1,7}\b")
 
-    def detect(self, text: str) -> list[Span]:
-        return [
-            Span(self.entity_type, m.start(), m.end(), m.group(), "regex")
-            for m in self._pattern.finditer(text)
-        ]
+    def detect(self, text: str) -> list[DetectedEntity]:
+        return _entities_from_matches(self.entity_type, text, self._pattern)
 
 
 class CourtCaseNumberDetector(BaseDetector):
     entity_type = "COURT_CASE_NUMBER"
-    # Simplified: А40-12345/2024 style (Cyrillic letter prefix optional in real cases)
     _pattern = re.compile(
-        r"\b[А-ЯA-Z]{1,3}\d{1,3}-\d{1,6}/\d{4}\b",
+        r"\b[А-ЯA-ZЁ]{1,3}\d{1,3}-\d{1,6}/\d{4}\b",
         re.IGNORECASE,
     )
 
-    def detect(self, text: str) -> list[Span]:
-        return [
-            Span(self.entity_type, m.start(), m.end(), m.group(), "regex")
-            for m in self._pattern.finditer(text)
-        ]
-        # TODO: expand court case number formats per jurisdiction
+    def detect(self, text: str) -> list[DetectedEntity]:
+        # TODO: expand court case formats per jurisdiction
+        return _entities_from_matches(self.entity_type, text, self._pattern)
+
+
+class ContractNumberDetector(BaseDetector):
+    entity_type = "CONTRACT_NUMBER"
+    _pattern = re.compile(
+        r"(?:договор|контракт|contract)\s*(?:№|#)?\s*[\w\-/]+",
+        re.IGNORECASE,
+    )
+
+    def detect(self, text: str) -> list[DetectedEntity]:
+        return _entities_from_matches(self.entity_type, text, self._pattern, confidence=0.8)
+
+
+class IpAddressDetector(BaseDetector):
+    entity_type = "IP_ADDRESS"
+    _pattern = re.compile(
+        r"\b(?:(?:25[0-5]|2[0-4]\d|[01]?\d?\d)\.){3}"
+        r"(?:25[0-5]|2[0-4]\d|[01]?\d?\d)\b"
+    )
+
+    def detect(self, text: str) -> list[DetectedEntity]:
+        return _entities_from_matches(self.entity_type, text, self._pattern)
+
+
+class UrlDetector(BaseDetector):
+    entity_type = "URL"
+    _pattern = re.compile(
+        r"https?://[a-zA-Z0-9._~:/?#\[\]@!$&'()*+,;=%\-]+",
+        re.IGNORECASE,
+    )
+
+    def detect(self, text: str) -> list[DetectedEntity]:
+        return _entities_from_matches(self.entity_type, text, self._pattern)
+
+
+class TelegramHandleDetector(BaseDetector):
+    entity_type = "TELEGRAM_HANDLE"
+    _pattern = re.compile(r"(?<![\w.])@[a-zA-Z][a-zA-Z0-9_]{4,31}\b")
+
+    def detect(self, text: str) -> list[DetectedEntity]:
+        return _entities_from_matches(self.entity_type, text, self._pattern)
 
 
 DEFAULT_DETECTORS: list[BaseDetector] = [
-    EmailDetector(),
-    PhoneDetector(),
-    InnDetector(),
-    SnilsDetector(),
     PassportRuDetector(),
+    SnilsDetector(),
+    InnDetector(),
+    OgrnDetector(),
+    OgrnipDetector(),
+    KppDetector(),
+    BikDetector(),
+    BankAccountDetector(),
+    CorrespondentAccountDetector(),
+    CardNumberDetector(),
     CadastralNumberDetector(),
     CourtCaseNumberDetector(),
+    ContractNumberDetector(),
+    EmailDetector(),
+    PhoneDetector(),
+    IpAddressDetector(),
+    UrlDetector(),
+    TelegramHandleDetector(),
 ]

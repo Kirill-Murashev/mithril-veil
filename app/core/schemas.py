@@ -1,7 +1,7 @@
 from enum import StrEnum
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class AnonymizeMode(StrEnum):
@@ -17,19 +17,35 @@ class AnonymizeRequest(BaseModel):
     )
 
 
-class DetectedEntity(BaseModel):
+class DetectedEntityResponse(BaseModel):
+    """API-safe entity; never includes original detected text."""
+
     type: str
     start: int
     end: int
-    value_preview: str
+    value_preview: str = "***"
     replacement: str
     detector: str
+    confidence: float
+    metadata: dict[str, str | int | float | bool | None] = Field(default_factory=dict)
+
+    @field_validator("value_preview")
+    @classmethod
+    def mask_preview(cls, value: str) -> str:
+        return "***"
+
+
+class DetectionSummary(BaseModel):
+    total_entities: int
+    entity_counts: dict[str, int]
+    detectors: dict[str, int]
 
 
 class AnonymizeResponse(BaseModel):
     text: str
-    entities: list[DetectedEntity]
+    entities: list[DetectedEntityResponse]
     warnings: list[str] = Field(default_factory=list)
+    summary: DetectionSummary
 
 
 class HealthResponse(BaseModel):

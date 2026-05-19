@@ -8,13 +8,15 @@ Detect and anonymize sensitive information in Russian text before sending it to 
 
 **Do not commit real PII** to this repository — no real names, documents, bank data, passports, INN/SNILS, addresses, or reversible mapping files. Use synthetic fixtures only. See [SECURITY.md](SECURITY.md).
 
-## Features (0.1.0)
+## Features (0.1.x)
 
 - FastAPI HTTP API with health check and text anonymization
-- Regex-based detectors: email, phone, INN, SNILS, passport, cadastral number, court case number
+- Deterministic regex detectors: email, phone, INN, SNILS, passport, OGRN/OGRNIP, KPP, BIK, bank/correspondent accounts, cards, cadastral/court/contract numbers, IP, URL, Telegram handles
+- INN/SNILS checksum validation with context-aware weak candidates
+- Priority-based span merging with confidence tie-breaking
+- Detection summary (`entity_counts`, `detectors`) in anonymize responses
 - Modes: `replace` (typed placeholders) and `redact`
-- Deterministic placeholders (`[EMAIL_1]`, `[PHONE_1]`, …)
-- API responses never include original detected values
+- API responses never include original detected values (`value_preview` is always masked)
 
 ## Requirements
 
@@ -44,7 +46,7 @@ Open http://127.0.0.1:8000/health
 ```bash
 curl -s -X POST http://127.0.0.1:8000/api/v1/anonymize \
   -H "Content-Type: application/json" \
-  -d '{"text":"Иван Тестович: test@example.local, ИНН 123456789012","mode":"replace"}'
+  -d '{"text":"Иван Тестович: test@example.local, ИНН 7701010017","mode":"replace"}'
 ```
 
 Example response shape:
@@ -62,7 +64,12 @@ Example response shape:
       "detector": "regex"
     }
   ],
-  "warnings": []
+  "warnings": [],
+  "summary": {
+    "total_entities": 2,
+    "entity_counts": { "EMAIL": 1, "INN": 1 },
+    "detectors": { "regex": 2 }
+  }
 }
 ```
 
