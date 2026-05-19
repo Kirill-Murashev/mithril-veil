@@ -1,11 +1,30 @@
 import pytest
-from app.core.exceptions import MithrilVeilError, UnsafeFileOperation, UnsupportedDocumentType
+from app.core.exceptions import (
+    EmptyExtractedText,
+    EncryptedDocumentUnsupported,
+    InputFileTooLarge,
+    MithrilVeilError,
+    UnsafeFileOperation,
+    UnsupportedDocumentType,
+)
 from app.document_io.base import (
     detect_supported_file_type,
     ensure_safe_output_path,
+    read_document_file,
     read_text_file,
     write_text_file,
 )
+from app.document_io.docx import read_docx_text
+from app.document_io.limits import MAX_INPUT_FILE_BYTES, MAX_PDF_PAGES
+from app.document_io.pdf import read_pdf_text
+from tests.fixtures_generators import (
+    write_blank_pdf,
+    write_encrypted_pdf,
+    write_synthetic_docx,
+    write_synthetic_pdf,
+)
+
+SYNTHETIC_EMAIL = "test@example.local"
 
 
 def test_detect_supported_txt(tmp_path):
@@ -20,40 +39,103 @@ def test_detect_supported_md(tmp_path):
     assert detect_supported_file_type(path) == "markdown"
 
 
-def test_detect_supported_markdown_extension(tmp_path):
-    path = tmp_path / "sample.markdown"
-    path.write_text("body", encoding="utf-8")
-    assert detect_supported_file_type(path) == "markdown"
+def test_detect_supported_docx(tmp_path):
+    path = tmp_path / "sample.docx"
+    write_synthetic_docx(path)
+    assert detect_supported_file_type(path) == "docx"
+
+
+def test_detect_supported_pdf(tmp_path):
+    path = tmp_path / "sample.pdf"
+    write_synthetic_pdf(path)
+    assert detect_supported_file_type(path) == "pdf"
+
+
+def test_read_docx_extracts_synthetic_text(tmp_path):
+    path = tmp_path / "in.docx"
+    write_synthetic_docx(path)
+    text = read_docx_text(path)
+    assert SYNTHETIC_EMAIL in text
+    assert "Тестовая Организация" in text
+
+
+def test_read_pdf_extracts_synthetic_text(tmp_path):
+    path = tmp_path / "in.pdf"
+    write_synthetic_pdf(path)
+    text, pages = read_pdf_text(path)
+    assert SYNTHETIC_EMAIL in text
+    assert pages >= 1
+
+
+def test_read_document_file_docx_metadata(tmp_path):
+    path = tmp_path / "in.docx"
+    write_synthetic_docx(path)
+    text, source = read_document_file(path)
+    assert SYNTHETIC_EMAIL in text
+    assert source["input_type"] == "docx"
+    assert source["file_size_bytes"] > 0
+
+
+def test_read_document_file_pdf_metadata(tmp_path):
+    path = tmp_path / "in.pdf"
+    write_synthetic_pdf(path)
+    text, source = read_document_file(path)
+    assert SYNTHETIC_EMAIL in text
+    assert source["input_type"] == "pdf"
+    assert source["page_count"] >= 1
+
+
+def test_empty_docx_raises(tmp_path):
+    from docx import Document
+
+    path = tmp_path / "empty.docx"
+    Document().save(path)
+    with pytest.raises(EmptyExtractedText):
+        read_docx_text(path)
+
+
+def test_encrypted_pdf_raises(tmp_path):
+    path = tmp_path / "locked.pdf"
+    write_encrypted_pdf(path)
+    with pytest.raises(EncryptedDocumentUnsupported, match="Encrypted"):
+        read_pdf_text(path)
+
+
+def test_blank_pdf_raises_no_text(tmp_path):
+    path = tmp_path / "blank.pdf"
+    write_blank_pdf(path)
+    with pytest.raises(UnsupportedDocumentType, match="no extractable text"):
+        read_pdf_text(path)
+
+
+def test_input_file_too_large(tmp_path, monkeypatch):
+    path = tmp_path / "big.txt"
+    path.write_bytes(b"x" * (MAX_INPUT_FILE_BYTES + 1))
+    with pytest.raises(InputFileTooLarge):
+        read_document_file(path)
+
+
+def test_pdf_page_limit(tmp_path, monkeypatch):
+    from pypdf import PdfWriter
+
+    path = tmp_path / "many.pdf"
+    writer = PdfWriter()
+    for _ in range(MAX_PDF_PAGES + 1):
+        writer.add_blank_page(width=200, height=200)
+    with path.open("wb") as handle:
+        writer.write(handle)
+
+    with pytest.raises(UnsupportedDocumentType, match="page limit"):
+        read_pdf_text(path)
 
 
 def test_read_write_txt_roundtrip(tmp_path):
     input_path = tmp_path / "in.txt"
     output_path = tmp_path / "out.txt"
-    input_path.write_text("Контакт: test@example.local", encoding="utf-8")
+    input_path.write_text(f"Контакт: {SYNTHETIC_EMAIL}", encoding="utf-8")
     content = read_text_file(input_path)
-    write_text_file(output_path, content.replace("test@example.local", "[EMAIL_1]"))
+    write_text_file(output_path, content.replace(SYNTHETIC_EMAIL, "[EMAIL_1]"))
     assert "[EMAIL_1]" in output_path.read_text(encoding="utf-8")
-
-
-def test_read_write_md_roundtrip(tmp_path):
-    path = tmp_path / "doc.md"
-    path.write_text("**test@example.local**", encoding="utf-8")
-    assert detect_supported_file_type(path) == "markdown"
-    assert "test@example.local" in read_text_file(path)
-
-
-def test_docx_unsupported(tmp_path):
-    path = tmp_path / "file.docx"
-    path.write_text("not a real docx", encoding="utf-8")
-    with pytest.raises(UnsupportedDocumentType, match="DOCX"):
-        detect_supported_file_type(path)
-
-
-def test_pdf_unsupported(tmp_path):
-    path = tmp_path / "file.pdf"
-    path.write_text("not a real pdf", encoding="utf-8")
-    with pytest.raises(UnsupportedDocumentType, match="PDF"):
-        detect_supported_file_type(path)
 
 
 def test_rtf_unsupported(tmp_path):
@@ -61,6 +143,12 @@ def test_rtf_unsupported(tmp_path):
     path.write_text("{\\rtf1}", encoding="utf-8")
     with pytest.raises(UnsupportedDocumentType, match="RTF"):
         detect_supported_file_type(path)
+
+
+def test_unsupported_output_extension(tmp_path):
+    path = tmp_path / "out.pdf"
+    with pytest.raises(UnsupportedDocumentType, match="output"):
+        write_text_file(path, "text", force=False)
 
 
 def test_write_refuses_existing_without_force(tmp_path):
@@ -79,4 +167,4 @@ def test_ensure_safe_output_rejects_input_equals_output(tmp_path):
 
 def test_read_missing_file(tmp_path):
     with pytest.raises(MithrilVeilError, match="not found"):
-        read_text_file(tmp_path / "missing.txt")
+        read_document_file(tmp_path / "missing.txt")

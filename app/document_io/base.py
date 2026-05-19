@@ -1,32 +1,58 @@
 from pathlib import Path
 
-from app.core.exceptions import MithrilVeilError, UnsafeFileOperation, UnsupportedDocumentType
+from app.core.exceptions import (
+    InputFileTooLarge,
+    MithrilVeilError,
+    UnsafeFileOperation,
+    UnsupportedDocumentType,
+)
+from app.document_io.limits import MAX_INPUT_FILE_BYTES
 
-SUPPORTED_TEXT_EXTENSIONS: dict[str, str] = {
+SUPPORTED_INPUT_EXTENSIONS: dict[str, str] = {
     ".txt": "txt",
     ".md": "markdown",
     ".markdown": "markdown",
+    ".docx": "docx",
+    ".pdf": "pdf",
 }
+
+SUPPORTED_OUTPUT_EXTENSIONS: frozenset[str] = frozenset({".txt", ".md", ".markdown"})
+
+SourceMetadata = dict[str, str | int]
 
 
 def detect_supported_file_type(path: Path) -> str:
-    """Return logical file type for supported text formats; raise for unsupported."""
+    """Return logical input file type; raise for unsupported extensions."""
     suffix = path.suffix.lower()
-    if suffix in SUPPORTED_TEXT_EXTENSIONS:
-        return SUPPORTED_TEXT_EXTENSIONS[suffix]
-    if suffix == ".docx":
-        from app.document_io.docx import raise_docx_not_supported
-
-        raise_docx_not_supported()
-    if suffix == ".pdf":
-        from app.document_io.pdf import raise_pdf_not_supported
-
-        raise_pdf_not_supported()
+    if suffix in SUPPORTED_INPUT_EXTENSIONS:
+        return SUPPORTED_INPUT_EXTENSIONS[suffix]
     if suffix == ".rtf":
         raise UnsupportedDocumentType("RTF is not supported.")
     if suffix:
         raise UnsupportedDocumentType(f"Unsupported file type: {suffix}")
-    raise UnsupportedDocumentType("File has no extension; supported types: .txt, .md, .markdown")
+    raise UnsupportedDocumentType(
+        "File has no extension; supported types: .txt, .md, .markdown, .docx, .pdf"
+    )
+
+
+def detect_supported_output_type(path: Path) -> str:
+    suffix = path.suffix.lower()
+    if suffix == ".txt":
+        return "txt"
+    if suffix in (".md", ".markdown"):
+        return "markdown"
+    raise UnsupportedDocumentType(
+        f"Unsupported output file type: {suffix or '(none)'}. Use .txt, .md, or .markdown."
+    )
+
+
+def check_input_file_size(path: Path) -> int:
+    if not path.is_file():
+        raise MithrilVeilError(f"Input file not found: {path}")
+    size = path.stat().st_size
+    if size > MAX_INPUT_FILE_BYTES:
+        raise InputFileTooLarge(f"Input file exceeds maximum size ({MAX_INPUT_FILE_BYTES} bytes).")
+    return size
 
 
 def ensure_safe_output_path(
@@ -35,11 +61,11 @@ def ensure_safe_output_path(
     *,
     force: bool,
 ) -> None:
-    """Refuse to overwrite the input file or an existing output without --force."""
     if input_path.resolve() == output_path.resolve():
         raise UnsafeFileOperation(
             "Output path must not be the same as input path. Refusing to overwrite input."
         )
+    detect_supported_output_type(output_path)
     if output_path.exists() and not force:
         raise UnsafeFileOperation(
             f"Output file already exists: {output_path}. Use --force to overwrite."
@@ -53,17 +79,43 @@ def ensure_safe_report_path(report_path: Path, *, force: bool) -> None:
         )
 
 
+def read_document_file(path: Path) -> tuple[str, SourceMetadata]:
+    """Read supported input document and return text plus safe source metadata."""
+    file_size = check_input_file_size(path)
+    input_type = detect_supported_file_type(path)
+    source: SourceMetadata = {
+        "input_type": input_type,
+        "file_size_bytes": file_size,
+    }
+
+    if input_type in ("txt", "markdown"):
+        try:
+            text = path.read_text(encoding="utf-8")
+        except OSError as exc:
+            raise MithrilVeilError(f"Cannot read file: {path}") from exc
+    elif input_type == "docx":
+        from app.document_io.docx import read_docx_text
+
+        text = read_docx_text(path)
+    elif input_type == "pdf":
+        from app.document_io.pdf import read_pdf_text
+
+        text, page_count = read_pdf_text(path)
+        source["page_count"] = page_count
+    else:
+        raise UnsupportedDocumentType(f"Unsupported input type: {input_type}")
+
+    return text, source
+
+
 def read_text_file(path: Path) -> str:
-    if not path.is_file():
-        raise MithrilVeilError(f"Input file not found: {path}")
-    detect_supported_file_type(path)
-    try:
-        return path.read_text(encoding="utf-8")
-    except OSError as exc:
-        raise MithrilVeilError(f"Cannot read file: {path}") from exc
+    """Backward-compatible reader returning text only."""
+    text, _ = read_document_file(path)
+    return text
 
 
 def write_text_file(path: Path, text: str, *, force: bool = False) -> None:
+    detect_supported_output_type(path)
     if path.exists() and not force:
         raise UnsafeFileOperation(f"Output file already exists: {path}. Use --force to overwrite.")
     path.parent.mkdir(parents=True, exist_ok=True)

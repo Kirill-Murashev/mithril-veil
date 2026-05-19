@@ -12,7 +12,7 @@ Detect and anonymize sensitive information in Russian text before sending it to 
 
 - FastAPI HTTP API with health check and text anonymization
 - **CLI** for text, stdin, and file-based anonymization with safe JSON reports
-- **Text document I/O** for `.txt`, `.md`, and `.markdown` (DOCX/PDF planned, not yet implemented)
+- **Document I/O** for `.txt`, `.md`, `.markdown`, **DOCX**, and **text-based PDF** (output is plain text; formatting not preserved)
 - Deterministic regex detectors: email, phone, INN, SNILS, passport, OGRN/OGRNIP, KPP, BIK, bank/correspondent accounts, cards, cadastral/court/contract numbers, IP, URL, Telegram handles
 - INN/SNILS checksum validation with context-aware weak candidates
 - Priority-based span merging with confidence tie-breaking
@@ -54,11 +54,27 @@ mithril-veil anonymize-file \
   --report /tmp/report.json
 ```
 
-- Supported input formats: `.txt`, `.md`, `.markdown`
-- `.docx` and `.pdf` are **planned** but not implemented in this release
+- Supported **input**: `.txt`, `.md`, `.markdown`, `.docx`, `.pdf` (text-based only)
+- Supported **output**: `.txt`, `.md`, `.markdown` (sanitized plain text)
+- **Not supported**: OCR, image-only PDFs, encrypted PDFs, `.rtf`
+- Limits: 10 MB max input size; 50 PDF pages max
 - The CLI refuses to overwrite the input file (`--output` must differ from `--input`)
 - Use `--force` to overwrite an existing output or report file
-- JSON reports never contain raw detected values
+- JSON reports never contain raw detected values (optional safe `source` metadata only)
+
+```bash
+mithril-veil anonymize-file \
+  --input input.docx \
+  --output sanitized.txt \
+  --mode replace \
+  --report report.json
+
+mithril-veil anonymize-file \
+  --input input.pdf \
+  --output sanitized.txt \
+  --mode replace \
+  --report report.json
+```
 
 ## Running the API
 

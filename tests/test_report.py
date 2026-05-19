@@ -29,3 +29,19 @@ def test_report_shape_and_safety():
         for value in entity.get("metadata", {}).values():
             assert value != SYNTHETIC_EMAIL
             assert value != SYNTHETIC_INN_10
+
+
+def test_report_includes_safe_source_metadata():
+    text = f"Контакт: {SYNTHETIC_EMAIL}."
+    response = run_anonymization(text, AnonymizeMode.REPLACE)
+    report = build_anonymization_report(
+        response,
+        AnonymizeMode.REPLACE,
+        source={"input_type": "pdf", "page_count": 2, "file_size_bytes": 1234},
+    )
+    assert report["source"] == {
+        "input_type": "pdf",
+        "page_count": 2,
+        "file_size_bytes": 1234,
+    }
+    assert SYNTHETIC_EMAIL not in json.dumps(report)

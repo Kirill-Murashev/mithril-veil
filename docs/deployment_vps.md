@@ -26,6 +26,9 @@ After `pip install .` in the project venv:
 
 ```bash
 mithril-veil anonymize-file --input ./examples/synthetic_input.txt --output /tmp/out.txt --mode replace
+
+# DOCX/PDF input → text output (text-based PDF only; no OCR)
+mithril-veil anonymize-file --input ./document.docx --output /tmp/out.txt --mode replace
 ```
 
 Process files only on the server you control. Do not upload real private documents to shared CI or public issue trackers.

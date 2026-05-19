@@ -5,6 +5,7 @@ import sys
 import pytest
 from app.cli.main import main
 from tests.conftest import SYNTHETIC_INN_10
+from tests.fixtures_generators import write_synthetic_docx, write_synthetic_pdf
 
 SYNTHETIC_TEXT = "Контакт: test@example.local"
 SYNTHETIC_EMAIL = "test@example.local"
@@ -180,10 +181,10 @@ def test_anonymize_file_rejects_overwrite_report(tmp_path):
     assert code == 2
 
 
-def test_unsupported_extension_exit_code_2(tmp_path):
-    input_path = tmp_path / "in.docx"
+def test_unsupported_rtf_exit_code_2(tmp_path):
+    input_path = tmp_path / "in.rtf"
     output_path = tmp_path / "out.txt"
-    input_path.write_text("placeholder", encoding="utf-8")
+    input_path.write_text("{\\rtf1}", encoding="utf-8")
     code, _, err = run_main(
         "anonymize-file",
         "--input",
@@ -194,8 +195,75 @@ def test_unsupported_extension_exit_code_2(tmp_path):
         "replace",
     )
     assert code == 2
-    assert "DOCX" in err
+    assert "RTF" in err
     assert SYNTHETIC_EMAIL not in err
+
+
+def test_anonymize_file_docx_to_txt(tmp_path):
+    input_path = tmp_path / "in.docx"
+    output_path = tmp_path / "out.txt"
+    report_path = tmp_path / "report.json"
+    write_synthetic_docx(input_path)
+    code, _, err = run_main(
+        "anonymize-file",
+        "--input",
+        str(input_path),
+        "--output",
+        str(output_path),
+        "--mode",
+        "replace",
+        "--report",
+        str(report_path),
+    )
+    assert code == 0
+    assert SYNTHETIC_EMAIL not in output_path.read_text(encoding="utf-8")
+    assert "[EMAIL_1]" in output_path.read_text(encoding="utf-8")
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["source"]["input_type"] == "docx"
+    assert SYNTHETIC_EMAIL not in json.dumps(report)
+    assert SYNTHETIC_EMAIL not in err
+
+
+def test_anonymize_file_pdf_to_txt(tmp_path):
+    input_path = tmp_path / "in.pdf"
+    output_path = tmp_path / "out.txt"
+    report_path = tmp_path / "report.json"
+    write_synthetic_pdf(input_path)
+    code, _, err = run_main(
+        "anonymize-file",
+        "--input",
+        str(input_path),
+        "--output",
+        str(output_path),
+        "--mode",
+        "replace",
+        "--report",
+        str(report_path),
+    )
+    assert code == 0
+    assert SYNTHETIC_EMAIL not in output_path.read_text(encoding="utf-8")
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["source"]["input_type"] == "pdf"
+    assert "page_count" in report["source"]
+    assert SYNTHETIC_EMAIL not in json.dumps(report)
+    assert SYNTHETIC_EMAIL not in err
+
+
+def test_anonymize_file_rejects_docx_output(tmp_path):
+    input_path = tmp_path / "in.txt"
+    output_path = tmp_path / "out.docx"
+    input_path.write_text(SYNTHETIC_TEXT, encoding="utf-8")
+    code, _, err = run_main(
+        "anonymize-file",
+        "--input",
+        str(input_path),
+        "--output",
+        str(output_path),
+        "--mode",
+        "replace",
+    )
+    assert code == 2
+    assert "output" in err.lower()
 
 
 def test_cli_report_does_not_expose_raw_values(tmp_path):

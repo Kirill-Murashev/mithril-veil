@@ -8,6 +8,9 @@ from pathlib import Path
 
 from app import __version__
 from app.core.exceptions import (
+    EmptyExtractedText,
+    EncryptedDocumentUnsupported,
+    InputFileTooLarge,
     InvalidAnonymizationMode,
     MithrilVeilError,
     UnsafeFileOperation,
@@ -19,7 +22,7 @@ from app.core.schemas import AnonymizeMode
 from app.document_io import (
     ensure_safe_output_path,
     ensure_safe_report_path,
-    read_text_file,
+    read_document_file,
     write_text_file,
 )
 
@@ -89,8 +92,13 @@ def _cmd_anonymize_file(args: argparse.Namespace) -> int:
         ensure_safe_report_path(Path(args.report), force=force)
 
     try:
-        content = read_text_file(input_path)
-    except UnsupportedDocumentType as exc:
+        content, source = read_document_file(input_path)
+    except (
+        UnsupportedDocumentType,
+        EncryptedDocumentUnsupported,
+        InputFileTooLarge,
+        EmptyExtractedText,
+    ) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return EXIT_UNSAFE
     except MithrilVeilError as exc:
@@ -98,12 +106,16 @@ def _cmd_anonymize_file(args: argparse.Namespace) -> int:
         return EXIT_ERROR
 
     response = run_anonymization(content, mode)
-    write_text_file(output_path, response.text, force=force)
+    try:
+        write_text_file(output_path, response.text, force=force)
+    except UnsupportedDocumentType as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return EXIT_UNSAFE
 
     if args.report:
         report_path = Path(args.report)
         try:
-            write_anonymization_report(report_path, response, mode, force=force)
+            write_anonymization_report(report_path, response, mode, force=force, source=source)
         except UnsafeFileOperation as exc:
             print(f"Error: {exc}", file=sys.stderr)
             return EXIT_UNSAFE
@@ -141,8 +153,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Anonymization mode (default: replace)",
     )
 
-    file_parser = subparsers.add_parser("anonymize-file", help="Anonymize a text/markdown file")
-    file_parser.add_argument("--input", required=True, help="Input file path (.txt, .md)")
+    file_parser = subparsers.add_parser(
+        "anonymize-file",
+        help="Anonymize a text, markdown, DOCX, or text-based PDF file",
+    )
+    file_parser.add_argument(
+        "--input",
+        required=True,
+        help="Input file path (.txt, .md, .docx, .pdf)",
+    )
     file_parser.add_argument("--output", required=True, help="Output file path")
     file_parser.add_argument(
         "--mode",
@@ -176,7 +195,13 @@ def main(argv: list[str] | None = None) -> int:
     except InvalidAnonymizationMode as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return EXIT_ERROR
-    except UnsafeFileOperation as exc:
+    except (
+        UnsupportedDocumentType,
+        EncryptedDocumentUnsupported,
+        InputFileTooLarge,
+        EmptyExtractedText,
+        UnsafeFileOperation,
+    ) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return EXIT_UNSAFE
     except MithrilVeilError as exc:

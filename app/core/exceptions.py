@@ -6,7 +6,7 @@ class MithrilVeilError(Exception):
 
 
 class UnsupportedDocumentType(MithrilVeilError):
-    """Raised when a document format is not supported in the current slice."""
+    """Raised when a document format is not supported."""
 
 
 class UnsafeFileOperation(MithrilVeilError):
@@ -15,3 +15,15 @@ class UnsafeFileOperation(MithrilVeilError):
 
 class InvalidAnonymizationMode(MithrilVeilError):
     """Raised when an anonymization mode is not recognized."""
+
+
+class InputFileTooLarge(MithrilVeilError):
+    """Raised when an input file exceeds the configured size limit."""
+
+
+class EmptyExtractedText(MithrilVeilError):
+    """Raised when a document yields no extractable text."""
+
+
+class EncryptedDocumentUnsupported(UnsupportedDocumentType):
+    """Raised when a document is encrypted and cannot be processed."""

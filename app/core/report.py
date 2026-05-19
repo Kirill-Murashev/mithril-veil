@@ -4,15 +4,17 @@ from typing import Any
 
 from app import __version__
 from app.core.schemas import AnonymizeMode, AnonymizeResponse
-from app.document_io.base import ensure_safe_report_path
+from app.document_io.base import SourceMetadata, ensure_safe_report_path
 
 
 def build_anonymization_report(
     response: AnonymizeResponse,
     mode: AnonymizeMode,
+    *,
+    source: SourceMetadata | None = None,
 ) -> dict[str, Any]:
     """Build a safe JSON-serializable report (no raw detected values)."""
-    return {
+    payload: dict[str, Any] = {
         "service": "mithril-veil",
         "version": __version__,
         "mode": mode.value,
@@ -20,6 +22,13 @@ def build_anonymization_report(
         "entities": [entity.model_dump() for entity in response.entities],
         "warnings": list(response.warnings),
     }
+    if source:
+        payload["source"] = {
+            key: value
+            for key, value in source.items()
+            if key in ("input_type", "page_count", "file_size_bytes")
+        }
+    return payload
 
 
 def write_anonymization_report(
@@ -28,9 +37,10 @@ def write_anonymization_report(
     mode: AnonymizeMode,
     *,
     force: bool = False,
+    source: SourceMetadata | None = None,
 ) -> None:
     ensure_safe_report_path(report_path, force=force)
-    payload = build_anonymization_report(response, mode)
+    payload = build_anonymization_report(response, mode, source=source)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         report_path.write_text(
