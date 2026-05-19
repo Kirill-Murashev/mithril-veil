@@ -10,6 +10,7 @@ class SecurityPolicy:
     log_detected_values: bool = False
     local_models_only: bool = True
     external_llm_calls: bool = False
+    use_ner: bool = False
 
 
 DEFAULT_POLICY = SecurityPolicy()

@@ -13,7 +13,8 @@ Detect and anonymize sensitive information in Russian text before sending it to 
 - FastAPI HTTP API with health check and text anonymization
 - **CLI** for text, stdin, and file-based anonymization with safe JSON reports
 - **Document I/O** for `.txt`, `.md`, `.markdown`, **DOCX**, and **text-based PDF** (output is plain text; formatting not preserved)
-- Deterministic regex detectors: email, phone, INN, SNILS, passport, OGRN/OGRNIP, KPP, BIK, bank/correspondent accounts, cards, cadastral/court/contract numbers, IP, URL, Telegram handles
+- Deterministic regex/checksum detectors: email, phone, INN, SNILS, passport, OGRN/OGRNIP, KPP, BIK, bank/correspondent accounts, cards, cadastral/court/contract numbers, IP, URL, Telegram handles
+- **Optional local Natasha NER** for Russian PERSON, ORGANIZATION, LOCATION (disabled by default; probabilistic — review results)
 - INN/SNILS checksum validation with context-aware weak candidates
 - Priority-based span merging with confidence tie-breaking
 - Detection summary (`entity_counts`, `detectors`) in API and CLI reports
@@ -44,6 +45,11 @@ mithril-veil version
 # Mithril Veil 0.1.0
 
 mithril-veil anonymize-text --text "Контакт: test@example.local" --mode replace
+
+mithril-veil anonymize-text \
+  --text "Иван Тестович работает в ООО Тестовая Организация." \
+  --mode replace \
+  --use-ner
 
 echo "Контакт: test@example.local" | mithril-veil anonymize-stdin --mode replace
 
@@ -89,7 +95,10 @@ Open http://127.0.0.1:8000/health
 ```bash
 curl -s -X POST http://127.0.0.1:8000/api/v1/anonymize \
   -H "Content-Type: application/json" \
-  -d '{"text":"Иван Тестович: test@example.local, ИНН 7701010017","mode":"replace"}'
+  -d '{"text":"Иван Тестович: test@example.local, ИНН 7701010017","mode":"replace","use_ner":false}'
+
+# Enable optional Natasha NER:
+# -d '{"text":"Иван Тестович работает в ООО Тестовая Организация.","mode":"replace","use_ner":true}'
 ```
 
 Example response shape:

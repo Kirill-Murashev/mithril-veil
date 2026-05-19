@@ -15,6 +15,10 @@ class AnonymizeRequest(BaseModel):
         default=AnonymizeMode.REPLACE,
         description="replace: typed placeholders; redact: [REDACTED]",
     )
+    use_ner: bool = Field(
+        default=False,
+        description="Enable local Natasha NER for PERSON, ORGANIZATION, LOCATION",
+    )
 
 
 class DetectedEntityResponse(BaseModel):

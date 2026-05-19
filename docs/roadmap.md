@@ -8,6 +8,7 @@
 - [x] Health and anonymize API
 - [x] Slice 3: CLI and safe text document ingestion
 - [x] **Slice 4A: DOCX and text-based PDF ingestion** (no OCR)
+- [x] **Slice 4B: optional Natasha NER** (PERSON, ORGANIZATION, LOCATION)
 - [x] Synthetic test fixtures only
 
 ## Next
@@ -15,7 +16,6 @@
 - Preset-driven entity selection
 - OGRN/OGRNIP/BANK_ACCOUNT checksum validation
 - OCR for image-only PDFs (optional, local-only)
-- Local NER for PERSON / ORGANIZATION / ADDRESS
 - Formatted DOCX/PDF output (optional)
 - CLI batch / directory mode
 

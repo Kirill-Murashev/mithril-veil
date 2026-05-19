@@ -25,6 +25,7 @@ ENTITY_PRIORITIES: dict[str, int] = {
     "ADDRESS": 60,
     "ORGANIZATION": 50,
     "PERSON": 50,
+    "LOCATION": 50,
 }
 
 # Metadata keys safe to expose via API (no raw PII values)
@@ -33,6 +34,8 @@ SAFE_METADATA_KEYS: frozenset[str] = frozenset(
         "checksum_valid",
         "context_matched",
         "luhn_valid",
+        "model",
+        "source_label",
     }
 )
 

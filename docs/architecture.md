@@ -17,17 +17,19 @@ Mithril Veil is a local-first service that detects Russian PII in text and retur
 
 By default the service does not persist original documents or detected values. The CLI writes only explicit `--output` and `--report` paths. Policy defaults forbid logging raw text or entity values.
 
-## Deterministic detection pipeline
+## Detection pipeline
 
 ```
 Input (HTTP body | CLI text | extracted document text)
-  → regex detectors (per entity type)
-  → checksum / context gates (INN, SNILS)
-  → merge_entities (priority, length, confidence)
-  → anonymizer (replace | redact)
-  → safe response mapping (strip internal text; mask value_preview)
-  → summary / optional JSON report with safe source metadata
+  1. Deterministic regex/checksum recognizers (always)
+  2. Optional local Natasha NER (PERSON, ORGANIZATION, LOCATION) when use_ner enabled
+  3. merge_entities (priority, length, confidence)
+  4. anonymizer (replace | redact)
+  5. safe response mapping (strip internal text; mask value_preview)
+  6. summary / optional JSON report with safe source metadata
 ```
+
+NER is **disabled by default** (`use_ner=false`). Structured PII (INN, SNILS, passport, bank account, etc.) has higher priority than Natasha spans in the merger.
 
 Internal `DetectedEntity.text` is used only in-process. It must not be logged, printed, or written to reports.
 

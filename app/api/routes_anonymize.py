@@ -8,4 +8,4 @@ router = APIRouter(prefix="/api/v1", tags=["anonymize"])
 
 @router.post("/anonymize", response_model=AnonymizeResponse)
 def anonymize_endpoint(body: AnonymizeRequest) -> AnonymizeResponse:
-    return run_anonymization(body.text, body.mode)
+    return run_anonymization(body.text, body.mode, use_ner=body.use_ner)

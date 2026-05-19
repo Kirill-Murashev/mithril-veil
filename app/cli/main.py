@@ -40,6 +40,24 @@ def _parse_mode(value: str) -> AnonymizeMode:
         ) from exc
 
 
+def _use_ner_from_args(args: argparse.Namespace) -> bool:
+    return bool(getattr(args, "use_ner", False))
+
+
+def _add_common_anonymize_args(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--mode",
+        default="replace",
+        choices=[m.value for m in AnonymizeMode],
+        help="Anonymization mode (default: replace)",
+    )
+    parser.add_argument(
+        "--use-ner",
+        action="store_true",
+        help="Enable local Natasha NER (PERSON, ORGANIZATION, LOCATION)",
+    )
+
+
 def _print_stderr_summary(response) -> None:
     counts = response.summary.entity_counts
     if not counts:
@@ -59,7 +77,7 @@ def _cmd_anonymize_text(args: argparse.Namespace) -> int:
         print("Error: --text must not be empty.", file=sys.stderr)
         return EXIT_ERROR
     mode = _parse_mode(args.mode)
-    response = run_anonymization(args.text, mode)
+    response = run_anonymization(args.text, mode, use_ner=_use_ner_from_args(args))
     _print_stderr_summary(response)
     sys.stdout.write(response.text)
     return EXIT_SUCCESS
@@ -75,7 +93,7 @@ def _cmd_anonymize_stdin(args: argparse.Namespace) -> int:
     if not raw.strip():
         print("Error: stdin input is empty.", file=sys.stderr)
         return EXIT_ERROR
-    response = run_anonymization(raw, mode)
+    response = run_anonymization(raw, mode, use_ner=_use_ner_from_args(args))
     _print_stderr_summary(response)
     sys.stdout.write(response.text)
     return EXIT_SUCCESS
@@ -105,7 +123,7 @@ def _cmd_anonymize_file(args: argparse.Namespace) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return EXIT_ERROR
 
-    response = run_anonymization(content, mode)
+    response = run_anonymization(content, mode, use_ner=_use_ner_from_args(args))
     try:
         write_text_file(output_path, response.text, force=force)
     except UnsupportedDocumentType as exc:
@@ -138,20 +156,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     text_parser = subparsers.add_parser("anonymize-text", help="Anonymize inline text")
     text_parser.add_argument("--text", required=True, help="Input text to anonymize")
-    text_parser.add_argument(
-        "--mode",
-        default="replace",
-        choices=[m.value for m in AnonymizeMode],
-        help="Anonymization mode (default: replace)",
-    )
+    _add_common_anonymize_args(text_parser)
 
     stdin_parser = subparsers.add_parser("anonymize-stdin", help="Anonymize text from stdin")
-    stdin_parser.add_argument(
-        "--mode",
-        default="replace",
-        choices=[m.value for m in AnonymizeMode],
-        help="Anonymization mode (default: replace)",
-    )
+    _add_common_anonymize_args(stdin_parser)
 
     file_parser = subparsers.add_parser(
         "anonymize-file",
@@ -163,12 +171,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Input file path (.txt, .md, .docx, .pdf)",
     )
     file_parser.add_argument("--output", required=True, help="Output file path")
-    file_parser.add_argument(
-        "--mode",
-        default="replace",
-        choices=[m.value for m in AnonymizeMode],
-        help="Anonymization mode (default: replace)",
-    )
+    _add_common_anonymize_args(file_parser)
     file_parser.add_argument("--report", help="Optional safe JSON report path")
     file_parser.add_argument(
         "--force",

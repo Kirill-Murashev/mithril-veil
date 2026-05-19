@@ -21,9 +21,17 @@
 | URL | HTTP(S) URLs | regex | — |
 | TELEGRAM_HANDLE | Telegram @username | regex | — |
 | DATE_OF_BIRTH | Birth dates | — | preset / TODO |
-| ADDRESS | Postal addresses | — | preset / NER TODO |
-| ORGANIZATION | Legal entity names | — | preset / NER TODO |
-| PERSON | Person names | — | preset / NER TODO |
+| ADDRESS | Postal addresses | regex / preset | partial |
+| PERSON | Person names | natasha (optional) | probabilistic NER |
+| ORGANIZATION | Legal entity names | natasha (optional) | probabilistic NER |
+| LOCATION | Places, addresses (NER) | natasha (optional) | probabilistic NER |
+
+## NER notes (Natasha)
+
+- Enabled only when `use_ner=true` (API) or `--use-ner` (CLI).
+- Local models only; no cloud calls.
+- May miss entities or over-redact harmless text — **manual review recommended**.
+- Structured identifiers (INN, SNILS, passport, etc.) keep higher merge priority than NER spans.
 
 ## Checksum behavior (INN / SNILS)
 
