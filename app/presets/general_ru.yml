@@ -1,0 +1,10 @@
+# General Russian text preset — entity types enabled for detection
+# TODO: wire presets into pipeline (see docs/TODO.md)
+name: general_ru
+description: General-purpose Russian PII detection
+enabled_entities:
+  - EMAIL
+  - PHONE
+  - INN
+  - SNILS
+  - PASSPORT_RU

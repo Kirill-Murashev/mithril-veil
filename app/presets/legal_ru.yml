@@ -1,0 +1,14 @@
+# Legal documents preset (Russian)
+# TODO: wire presets into pipeline (see docs/TODO.md)
+name: legal_ru
+description: Legal and court-related Russian documents
+enabled_entities:
+  - EMAIL
+  - PHONE
+  - INN
+  - SNILS
+  - PASSPORT_RU
+  - COURT_CASE_NUMBER
+  - PERSON
+  - ORGANIZATION
+  - ADDRESS

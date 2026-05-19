@@ -1,0 +1,10 @@
+services:
+  mithril-veil:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      MITHRIL_HOST: 0.0.0.0
+      MITHRIL_PORT: 8000
+      MITHRIL_LOG_LEVEL: info
+    restart: unless-stopped

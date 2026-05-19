@@ -1,0 +1,17 @@
+# Valuation / appraisal reports preset (Russian)
+# TODO: wire presets into pipeline (see docs/TODO.md)
+name: valuation_ru
+description: Valuation and appraisal report sanitization
+enabled_entities:
+  - PERSON
+  - ORGANIZATION
+  - ADDRESS
+  - PHONE
+  - EMAIL
+  - INN
+  - SNILS
+  - PASSPORT_RU
+  - CADASTRAL_NUMBER
+  - CONTRACT_NUMBER
+  - BANK_ACCOUNT
+  - COURT_CASE_NUMBER
