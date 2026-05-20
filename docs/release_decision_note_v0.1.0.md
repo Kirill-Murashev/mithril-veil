@@ -143,3 +143,18 @@ Required if application code, dependencies, CI workflows, or security-sensitive 
 ## Slice recommendation
 
 **Ready for maintainer tagging decision (Option A)** — local gates and latest `main` CI pass; version metadata consistent; security/hygiene audit clean; `v0.1.0` tag absent locally and on `origin`. Final approval remains with the maintainer (CHANGELOG move at tag time, GitHub release notes, optional UI re-check of CI).
+
+---
+
+## Post-push confirmation (2026-05-20)
+
+| Item | Result |
+|------|--------|
+| Pushed commit | `ecccffe` — Add v0.1.0 release decision note |
+| `HEAD` / `origin/main` | Both **`ecccffe`** after push |
+| CI on pushed commit | **Success** — run [26185928738](https://github.com/Kirill-Murashev/mithril-veil/actions/runs/26185928738), `head_sha` `ecccffe55b1f8955265a172789fc718f46883a63`, job `test (3.12)` ~28s |
+| Prior CI (pre-push) | Success on `f32ca47` — run [26183860141](https://github.com/Kirill-Murashev/mithril-veil/actions/runs/26183860141) |
+| `v0.1.0` tag (local / remote) | **Still absent** |
+| Tag or GitHub release created | **No** |
+
+**Maintainer:** Tagging `v0.1.0` and publishing a GitHub release remain separate, explicit approvals. This slice pushed the decision note and confirmed CI on `ecccffe` only.
