@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 
 from app import __version__
+from app.core.mapping import MappingReportMetadata
 from app.core.presets import PolicyMetadata
 from app.core.schemas import AnonymizeMode, AnonymizeResponse
 from app.document_io.base import SourceMetadata, ensure_safe_report_path
@@ -14,6 +15,7 @@ def build_anonymization_report(
     *,
     source: SourceMetadata | None = None,
     policy: PolicyMetadata | None = None,
+    mapping_metadata: MappingReportMetadata | None = None,
 ) -> dict[str, Any]:
     """Build a safe JSON-serializable report (no raw detected values)."""
     payload: dict[str, Any] = {
@@ -36,6 +38,8 @@ def build_anonymization_report(
             for key, value in source.items()
             if key in ("input_type", "page_count", "file_size_bytes")
         }
+    if mapping_metadata is not None:
+        payload.update(mapping_metadata.to_report_fragment())
     return payload
 
 
@@ -47,9 +51,16 @@ def write_anonymization_report(
     force: bool = False,
     source: SourceMetadata | None = None,
     policy: PolicyMetadata | None = None,
+    mapping_metadata: MappingReportMetadata | None = None,
 ) -> None:
     ensure_safe_report_path(report_path, force=force)
-    payload = build_anonymization_report(response, mode, source=source, policy=policy)
+    payload = build_anonymization_report(
+        response,
+        mode,
+        source=source,
+        policy=policy,
+        mapping_metadata=mapping_metadata,
+    )
     report_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         report_path.write_text(

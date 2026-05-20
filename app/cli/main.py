@@ -12,19 +12,32 @@ from app.core.exceptions import (
     EncryptedDocumentUnsupported,
     InputFileTooLarge,
     InvalidAnonymizationMode,
+    InvalidEncryptedMappingPath,
+    MappingPassphraseMissing,
     MithrilVeilError,
     UnsafeFileOperation,
     UnsupportedDocumentType,
 )
+from app.core.mapping import PseudonymizationSession
 from app.core.pipeline import run_anonymization
-from app.core.presets import UnknownPresetError, list_presets, resolve_anonymization_options
+from app.core.presets import (
+    PolicyMetadata,
+    UnknownPresetError,
+    list_presets,
+    resolve_anonymization_options,
+)
 from app.core.report import write_anonymization_report
-from app.core.schemas import AnonymizeMode
+from app.core.schemas import AnonymizeMode, AnonymizeResponse
 from app.document_io import (
+    ensure_safe_mapping_path,
     ensure_safe_output_path,
     ensure_safe_report_path,
     read_document_file,
     write_text_file,
+)
+from app.security.encrypted_mapping import (
+    DEFAULT_MAPPING_PASSPHRASE_ENV,
+    write_encrypted_mapping_file,
 )
 
 EXIT_SUCCESS = 0
@@ -37,7 +50,7 @@ def _parse_mode(value: str) -> AnonymizeMode:
         return AnonymizeMode(value)
     except ValueError as exc:
         raise InvalidAnonymizationMode(
-            f"Invalid mode: {value!r}. Use 'replace' or 'redact'."
+            f"Invalid mode: {value!r}. Use 'replace', 'redact', or 'pseudonymize'."
         ) from exc
 
 
@@ -119,6 +132,78 @@ def _add_common_anonymize_args(parser: argparse.ArgumentParser) -> None:
         default=None,
         help="Hugging Face GLiNER model id (default: urchade/gliner_mediumv2.1)",
     )
+    parser.add_argument(
+        "--mapping-output",
+        default=None,
+        metavar="PATH",
+        help="Encrypted mapping file path (.json.enc; pseudonymize mode only)",
+    )
+    parser.add_argument(
+        "--mapping-passphrase-env",
+        default=DEFAULT_MAPPING_PASSPHRASE_ENV,
+        metavar="ENV_VAR",
+        help=(
+            "Environment variable holding the mapping encryption passphrase "
+            f"(default: {DEFAULT_MAPPING_PASSPHRASE_ENV})"
+        ),
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing output, report, or mapping files",
+    )
+
+
+def _validate_mapping_output_args(args: argparse.Namespace, mode: AnonymizeMode) -> None:
+    if getattr(args, "mapping_output", None) and mode != AnonymizeMode.PSEUDONYMIZE:
+        raise MithrilVeilError(
+            "--mapping-output is only supported when --mode is pseudonymize."
+        )
+
+
+def _pseudonymization_session(mode: AnonymizeMode) -> PseudonymizationSession | None:
+    if mode == AnonymizeMode.PSEUDONYMIZE:
+        return PseudonymizationSession.reversible()
+    return None
+
+
+def _write_mapping_output_if_requested(
+    args: argparse.Namespace,
+    session: PseudonymizationSession | None,
+) -> None:
+    mapping_output = getattr(args, "mapping_output", None)
+    if not mapping_output:
+        return
+    if session is None or session.mapping is None:
+        raise MithrilVeilError("Internal error: pseudonymize session has no mapping.")
+    mapping_path = Path(mapping_output)
+    force = bool(getattr(args, "force", False))
+    ensure_safe_mapping_path(mapping_path, force=force)
+    write_encrypted_mapping_file(
+        mapping_path,
+        session.mapping.serialize_for_encryption(),
+        force=force,
+        passphrase_env=getattr(args, "mapping_passphrase_env", DEFAULT_MAPPING_PASSPHRASE_ENV),
+    )
+    session.mark_mapping_written(encrypted=True)
+
+
+def _run_anonymization_from_args(
+    args: argparse.Namespace,
+    text: str,
+) -> tuple[AnonymizeResponse, PolicyMetadata | None, PseudonymizationSession | None]:
+    mode = _parse_mode(args.mode)
+    _validate_mapping_output_args(args, mode)
+    if getattr(args, "mapping_output", None):
+        ensure_safe_mapping_path(
+            Path(args.mapping_output),
+            force=bool(getattr(args, "force", False)),
+        )
+    resolved = _anonymization_kwargs(args)
+    session = _pseudonymization_session(mode)
+    response, policy = run_anonymization(text, mode, _resolved=resolved, session=session)
+    _write_mapping_output_if_requested(args, session)
+    return response, policy, session
 
 
 def _print_stderr_summary(response) -> None:
@@ -145,16 +230,13 @@ def _cmd_anonymize_text(args: argparse.Namespace) -> int:
     if not args.text.strip():
         print("Error: --text must not be empty.", file=sys.stderr)
         return EXIT_ERROR
-    mode = _parse_mode(args.mode)
-    resolved = _anonymization_kwargs(args)
-    response, _policy = run_anonymization(args.text, mode, _resolved=resolved)
+    response, _policy, _session = _run_anonymization_from_args(args, args.text)
     _print_stderr_summary(response)
     sys.stdout.write(response.text)
     return EXIT_SUCCESS
 
 
 def _cmd_anonymize_stdin(args: argparse.Namespace) -> int:
-    mode = _parse_mode(args.mode)
     try:
         raw = sys.stdin.read()
     except OSError as exc:
@@ -163,8 +245,7 @@ def _cmd_anonymize_stdin(args: argparse.Namespace) -> int:
     if not raw.strip():
         print("Error: stdin input is empty.", file=sys.stderr)
         return EXIT_ERROR
-    resolved = _anonymization_kwargs(args)
-    response, _policy = run_anonymization(raw, mode, _resolved=resolved)
+    response, _policy, _session = _run_anonymization_from_args(args, raw)
     _print_stderr_summary(response)
     sys.stdout.write(response.text)
     return EXIT_SUCCESS
@@ -173,12 +254,13 @@ def _cmd_anonymize_stdin(args: argparse.Namespace) -> int:
 def _cmd_anonymize_file(args: argparse.Namespace) -> int:
     input_path = Path(args.input)
     output_path = Path(args.output)
-    mode = _parse_mode(args.mode)
     force = bool(args.force)
 
     ensure_safe_output_path(input_path, output_path, force=force)
     if args.report:
         ensure_safe_report_path(Path(args.report), force=force)
+    if getattr(args, "mapping_output", None):
+        ensure_safe_mapping_path(Path(args.mapping_output), force=force)
 
     try:
         content, source = read_document_file(input_path)
@@ -194,8 +276,7 @@ def _cmd_anonymize_file(args: argparse.Namespace) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return EXIT_ERROR
 
-    resolved = _anonymization_kwargs(args)
-    response, policy = run_anonymization(content, mode, _resolved=resolved)
+    response, policy, session = _run_anonymization_from_args(args, content)
     try:
         write_text_file(output_path, response.text, force=force)
     except UnsupportedDocumentType as exc:
@@ -208,10 +289,11 @@ def _cmd_anonymize_file(args: argparse.Namespace) -> int:
             write_anonymization_report(
                 report_path,
                 response,
-                mode,
+                _parse_mode(args.mode),
                 force=force,
                 source=source,
                 policy=policy,
+                mapping_metadata=session.mapping_metadata if session else None,
             )
         except UnsafeFileOperation as exc:
             print(f"Error: {exc}", file=sys.stderr)
@@ -253,11 +335,6 @@ def build_parser() -> argparse.ArgumentParser:
     file_parser.add_argument("--output", required=True, help="Output file path")
     _add_common_anonymize_args(file_parser)
     file_parser.add_argument("--report", help="Optional safe JSON report path")
-    file_parser.add_argument(
-        "--force",
-        action="store_true",
-        help="Overwrite existing output or report files",
-    )
 
     return parser
 
@@ -291,6 +368,12 @@ def main(argv: list[str] | None = None) -> int:
     ) as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return EXIT_UNSAFE
+    except (
+        MappingPassphraseMissing,
+        InvalidEncryptedMappingPath,
+    ) as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return EXIT_ERROR
     except MithrilVeilError as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return EXIT_ERROR

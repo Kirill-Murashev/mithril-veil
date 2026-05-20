@@ -15,7 +15,9 @@ For contributor and release checks, see [docs/security_checklist.md](docs/securi
 
 ## Mapping files
 
-Reversible anonymization mapping files must never be committed. Patterns such as `mapping*.json` are gitignored.
+Reversible anonymization mapping files must never be committed. Patterns such as `mapping*.json` and `mapping*.json.enc` are gitignored.
+
+CLI mapping output is **encrypted by default** (`.json.enc` envelope with PBKDF2 + Fernet). Store passphrases outside the repository (e.g. `MITHRIL_VEIL_MAPPING_PASSPHRASE`). Treat mapping files like key material: restrict filesystem permissions, do not attach to tickets or logs, and delete when no longer needed.
 
 ## Local-first security model
 

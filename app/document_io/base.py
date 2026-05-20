@@ -79,6 +79,17 @@ def ensure_safe_report_path(report_path: Path, *, force: bool) -> None:
         )
 
 
+def ensure_safe_mapping_path(mapping_path: Path, *, force: bool) -> None:
+    """Validate encrypted mapping suffix and refuse overwrite without --force."""
+    from app.security.encrypted_mapping import require_encrypted_mapping_path
+
+    require_encrypted_mapping_path(mapping_path)
+    if mapping_path.exists() and not force:
+        raise UnsafeFileOperation(
+            f"Mapping file already exists: {mapping_path}. Use --force to overwrite."
+        )
+
+
 def read_document_file(path: Path) -> tuple[str, SourceMetadata]:
     """Read supported input document and return text plus safe source metadata."""
     file_size = check_input_file_size(path)

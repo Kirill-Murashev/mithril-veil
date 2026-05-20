@@ -8,7 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
-- (Nothing yet.)
+- **`pseudonymize` mode** — deterministic typed placeholders with optional reversible mapping kept in memory during a run; API responses never include mapping payloads or raw detected values.
+- **Encrypted local mapping files** — CLI `--mapping-output` (`.json.enc` only) with passphrase from `MITHRIL_VEIL_MAPPING_PASSPHRASE` (override via `--mapping-passphrase-env`); refuse overwrite unless `--force`.
+- **Safe report mapping metadata** — reports may include only `mapping.written` and `mapping.encrypted` flags, never placeholder-to-original entries.
 
 ## [0.1.0] - 2026-05-20
 

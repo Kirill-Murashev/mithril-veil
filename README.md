@@ -24,7 +24,7 @@ Detect and anonymize sensitive information in Russian text before sending it to 
 - INN/SNILS checksum validation with context-aware weak candidates
 - Priority-based span merging with confidence tie-breaking
 - Detection summary (`entity_counts`, `detectors`) in API and CLI reports
-- Modes: `replace` (typed placeholders) and `redact`
+- Modes: `replace` (typed placeholders), `redact`, and `pseudonymize` (placeholders plus optional encrypted local mapping)
 - API/CLI never expose original detected values (`value_preview` is always masked)
 
 ## Requirements
@@ -102,6 +102,7 @@ mithril-veil anonymize-file \
 - The CLI refuses to overwrite the input file (`--output` must differ from `--input`)
 - Use `--force` to overwrite an existing output or report file
 - JSON reports never contain raw detected values (optional safe `source` and `policy` metadata only)
+- **`pseudonymize` + mapping (CLI only):** use `--mode pseudonymize` with `--mapping-output path.json.enc` to write an encrypted placeholder→original mapping locally; set `MITHRIL_VEIL_MAPPING_PASSPHRASE` (or `--mapping-passphrase-env`). The HTTP API never returns mapping data. Reports list only `mapping.written` / `mapping.encrypted` when a mapping file was written. Mapping files are gitignored (`mapping*.json`, `mapping*.json.enc`).
 - **`--preset`** selects a bundled YAML profile; **`list-presets`** lists available ids
 - Available presets: `general_ru`, `legal_ru`, `valuation_ru`, `banking_ru`, `court_case_ru`
 - Explicit `--use-ner`, `--no-use-ner`, `--use-gliner`, `--no-use-gliner`, and GLiNER flags override preset defaults

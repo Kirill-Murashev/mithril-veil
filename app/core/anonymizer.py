@@ -1,18 +1,18 @@
 from app.core.entities import DetectedEntity, entity_to_api_dict
+from app.core.mapping import ReversibleMapping
+from app.core.placeholders import placeholder_for
 from app.core.schemas import AnonymizeMode, DetectedEntityResponse
 
 MASK_PREVIEW = "***"
 REDACTED = "[REDACTED]"
 
 
-def _placeholder(entity_type: str, index: int) -> str:
-    return f"[{entity_type}_{index}]"
-
-
 def anonymize(
     text: str,
     entities: list[DetectedEntity],
     mode: AnonymizeMode,
+    *,
+    reversible_mapping: ReversibleMapping | None = None,
 ) -> tuple[str, list[DetectedEntityResponse]]:
     """
     Apply replacements right-to-left so indices stay valid.
@@ -33,7 +33,9 @@ def anonymize(
         if mode == AnonymizeMode.REDACT:
             replacement = REDACTED
         else:
-            replacement = _placeholder(entity.type, idx)
+            replacement = placeholder_for(entity.type, idx)
+            if reversible_mapping is not None and mode == AnonymizeMode.PSEUDONYMIZE:
+                reversible_mapping.record(entity, index=idx, placeholder=replacement)
 
         payload = entity_to_api_dict(entity, replacement)
         responses.append(

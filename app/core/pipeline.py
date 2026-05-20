@@ -1,6 +1,7 @@
 from app.core.anonymizer import anonymize
 from app.core.entities import DetectedEntity
 from app.core.gliner_config import GLINER_DEFAULT_THRESHOLD, GLINER_MODEL_NAME
+from app.core.mapping import PseudonymizationSession, ReversibleMapping
 from app.core.presets import (
     PolicyMetadata,
     ResolvedAnonymizationOptions,
@@ -80,6 +81,8 @@ def run_anonymization(
     gliner_model_name: str | None = None,
     enabled_entities: frozenset[str] | None = None,
     _resolved: ResolvedAnonymizationOptions | None = None,
+    session: PseudonymizationSession | None = None,
+    reversible_mapping: ReversibleMapping | None = None,
 ) -> tuple[AnonymizeResponse, PolicyMetadata | None]:
     if _resolved is not None:
         options = _resolved
@@ -92,6 +95,10 @@ def run_anonymization(
             gliner_threshold=gliner_threshold,
             gliner_model_name=gliner_model_name,
         )
+    active_session = session
+    if mode == AnonymizeMode.PSEUDONYMIZE and active_session is None:
+        active_session = PseudonymizationSession.reversible()
+
     active_enabled = enabled_entities if enabled_entities is not None else options.enabled_entities
     entities = detect_all(
         text,
@@ -102,7 +109,15 @@ def run_anonymization(
         gliner_model_name=gliner_model_name or options.gliner_model_name,
     )
     entities = filter_entities_by_enabled_types(entities, active_enabled)
-    anonymized_text, api_entities = anonymize(text, entities, mode)
+    mapping_store = reversible_mapping
+    if mapping_store is None and active_session is not None:
+        mapping_store = active_session.mapping
+    anonymized_text, api_entities = anonymize(
+        text,
+        entities,
+        mode,
+        reversible_mapping=mapping_store,
+    )
     summary = build_detection_summary(entities)
     response = AnonymizeResponse(
         text=anonymized_text,

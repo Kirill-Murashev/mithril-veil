@@ -1,11 +1,13 @@
 import json
 
+from app.core.mapping import PseudonymizationSession
 from app.core.pipeline import run_anonymization
 from app.core.report import build_anonymization_report
 from app.core.schemas import AnonymizeMode
 from tests.conftest import SYNTHETIC_INN_10
 
 SYNTHETIC_EMAIL = "test@example.local"
+SYNTHETIC_PERSON = "Иван Тестович"
 
 
 def test_report_shape_and_safety():
@@ -45,3 +47,27 @@ def test_report_includes_safe_source_metadata():
         "file_size_bytes": 1234,
     }
     assert SYNTHETIC_EMAIL not in json.dumps(report)
+
+
+def test_report_mapping_metadata_written_encrypted_only():
+    text = f"{SYNTHETIC_PERSON}, {SYNTHETIC_EMAIL}, ИНН {SYNTHETIC_INN_10}."
+    session = PseudonymizationSession.reversible()
+    response, _ = run_anonymization(text, AnonymizeMode.PSEUDONYMIZE, session=session)
+    session.mark_mapping_written(encrypted=True)
+    report = build_anonymization_report(
+        response,
+        AnonymizeMode.PSEUDONYMIZE,
+        mapping_metadata=session.mapping_metadata,
+    )
+    assert report["mapping"] == {"written": True, "encrypted": True}
+    raw = json.dumps(report, ensure_ascii=False)
+    assert SYNTHETIC_PERSON not in raw
+    assert SYNTHETIC_EMAIL not in raw
+    assert SYNTHETIC_INN_10 not in raw
+
+
+def test_report_omits_mapping_metadata_when_not_written():
+    text = f"Контакт: {SYNTHETIC_EMAIL}."
+    response, _ = run_anonymization(text, AnonymizeMode.PSEUDONYMIZE)
+    report = build_anonymization_report(response, AnonymizeMode.PSEUDONYMIZE)
+    assert "mapping" not in report

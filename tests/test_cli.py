@@ -4,11 +4,16 @@ import sys
 
 import pytest
 from app.cli.main import main
+from app.security.encrypted_mapping import (
+    DEFAULT_MAPPING_PASSPHRASE_ENV,
+    read_encrypted_mapping_file,
+)
 from tests.conftest import SYNTHETIC_INN_10
 from tests.fixtures_generators import write_synthetic_docx, write_synthetic_pdf
 
 SYNTHETIC_TEXT = "Контакт: test@example.local"
 SYNTHETIC_EMAIL = "test@example.local"
+SYNTHETIC_PERSON = "Иван Тестович"
 
 
 def run_main(*argv: str) -> tuple[int, str, str]:
@@ -34,6 +39,20 @@ def test_version_command():
 
 def test_anonymize_text_replace_mode():
     code, out, err = run_main("anonymize-text", "--text", SYNTHETIC_TEXT, "--mode", "replace")
+    assert code == 0
+    assert SYNTHETIC_EMAIL not in out
+    assert "[EMAIL_1]" in out
+    assert SYNTHETIC_EMAIL not in err
+
+
+def test_anonymize_text_pseudonymize_mode():
+    code, out, err = run_main(
+        "anonymize-text",
+        "--text",
+        SYNTHETIC_TEXT,
+        "--mode",
+        "pseudonymize",
+    )
     assert code == 0
     assert SYNTHETIC_EMAIL not in out
     assert "[EMAIL_1]" in out
@@ -77,6 +96,88 @@ def test_anonymize_file_creates_output(tmp_path):
     assert code == 0
     assert SYNTHETIC_EMAIL not in output_path.read_text(encoding="utf-8")
     assert "[EMAIL_1]" in output_path.read_text(encoding="utf-8")
+
+
+def test_anonymize_file_pseudonymize_writes_encrypted_mapping(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+):
+    monkeypatch.setenv(DEFAULT_MAPPING_PASSPHRASE_ENV, "synthetic-cli-mapping-secret")
+    input_path = tmp_path / "in.txt"
+    output_path = tmp_path / "out.txt"
+    report_path = tmp_path / "report.json"
+    mapping_path = tmp_path / "mapping.json.enc"
+    text = f"{SYNTHETIC_PERSON}, {SYNTHETIC_EMAIL}, ИНН {SYNTHETIC_INN_10}."
+    input_path.write_text(text, encoding="utf-8")
+    code, _, err = run_main(
+        "anonymize-file",
+        "--input",
+        str(input_path),
+        "--output",
+        str(output_path),
+        "--mode",
+        "pseudonymize",
+        "--mapping-output",
+        str(mapping_path),
+        "--report",
+        str(report_path),
+    )
+    assert code == 0
+    assert mapping_path.is_file()
+    assert SYNTHETIC_EMAIL not in output_path.read_text(encoding="utf-8")
+    assert SYNTHETIC_EMAIL not in err
+    assert SYNTHETIC_PERSON not in err
+    assert SYNTHETIC_INN_10 not in err
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["mode"] == "pseudonymize"
+    assert report["mapping"] == {"written": True, "encrypted": True}
+    assert SYNTHETIC_EMAIL not in json.dumps(report)
+    assert SYNTHETIC_PERSON not in json.dumps(report)
+    restored = read_encrypted_mapping_file(mapping_path)
+    assert "[EMAIL_1]" in restored
+    assert restored["[EMAIL_1]"] == SYNTHETIC_EMAIL
+
+
+def test_anonymize_file_mapping_force_overwrites(tmp_path, monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv(DEFAULT_MAPPING_PASSPHRASE_ENV, "synthetic-cli-mapping-secret")
+    input_path = tmp_path / "in.txt"
+    output_path = tmp_path / "out.txt"
+    mapping_path = tmp_path / "mapping.json.enc"
+    input_path.write_text(SYNTHETIC_TEXT, encoding="utf-8")
+    mapping_path.write_text("{}", encoding="utf-8")
+    code, _, _ = run_main(
+        "anonymize-file",
+        "--input",
+        str(input_path),
+        "--output",
+        str(output_path),
+        "--mode",
+        "pseudonymize",
+        "--mapping-output",
+        str(mapping_path),
+        "--force",
+    )
+    assert code == 0
+    assert "[EMAIL_1]" in read_encrypted_mapping_file(mapping_path)
+
+
+def test_anonymize_file_rejects_mapping_output_without_pseudonymize(tmp_path):
+    input_path = tmp_path / "in.txt"
+    output_path = tmp_path / "out.txt"
+    mapping_path = tmp_path / "mapping.json.enc"
+    input_path.write_text(SYNTHETIC_TEXT, encoding="utf-8")
+    code, _, err = run_main(
+        "anonymize-file",
+        "--input",
+        str(input_path),
+        "--output",
+        str(output_path),
+        "--mode",
+        "replace",
+        "--mapping-output",
+        str(mapping_path),
+    )
+    assert code == 1
+    assert "pseudonymize" in err.lower()
 
 
 def test_anonymize_file_creates_safe_report(tmp_path):

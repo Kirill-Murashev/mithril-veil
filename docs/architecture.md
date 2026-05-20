@@ -27,9 +27,10 @@ Input (HTTP body | CLI text | extracted document text)
   3. Optional local GLiNER zero-shot detector when use_gliner=true
   4. merge_entities (priority, length, confidence)
   5. filter by preset enabled_entities (when a preset is selected)
-  6. anonymizer (replace | redact)
+  6. anonymizer (replace | redact | pseudonymize)
   7. safe response mapping (strip internal text; mask value_preview)
   8. summary / optional JSON report with safe source and policy metadata
+  9. optional encrypted mapping file (CLI only, explicit path; never in API or report body)
 ```
 
 ## Policy presets
@@ -63,6 +64,16 @@ Limits: `MAX_INPUT_FILE_BYTES` (10 MB), `MAX_PDF_PAGES` (50).
 
 DOCX/PDF input produces **text output** only; layout is not preserved.
 
+## Reversible pseudonymization (mapping)
+
+| Surface | Mapping in memory | Mapping on disk | Report |
+|---------|-------------------|-----------------|--------|
+| API `pseudonymize` | Yes (per request) | No | N/A |
+| CLI `replace` / `redact` | No | No | No mapping block |
+| CLI `pseudonymize` | Yes | Only with `--mapping-output` (`.json.enc`) | `mapping.written` / `mapping.encrypted` only |
+
+Passphrase for encrypted mapping files comes from an environment variable (default `MITHRIL_VEIL_MAPPING_PASSPHRASE`). Original span text never appears in stdout, stderr, API JSON, or report JSON.
+
 ## CLI file flow
 
 ```
@@ -70,9 +81,10 @@ mithril-veil anonymize-file
   → validate paths and output extension
   → check file size
   → read_document_file (format-specific extraction)
-  → run_anonymization (same as API)
+  → run_anonymization (same as API; pseudonymize keeps session mapping in memory)
   → write_text_file (anonymized plain text)
-  → optional write_anonymization_report (safe JSON + source metadata)
+  → optional write_encrypted_mapping_file (--mapping-output, pseudonymize only)
+  → optional write_anonymization_report (safe JSON + source + mapping flags)
 ```
 
 ## Deployment

@@ -27,3 +27,19 @@ class EmptyExtractedText(MithrilVeilError):
 
 class EncryptedDocumentUnsupported(UnsupportedDocumentType):
     """Raised when a document is encrypted and cannot be processed."""
+
+
+class MappingPassphraseMissing(MithrilVeilError):
+    """Raised when the mapping encryption passphrase environment variable is unset or empty."""
+
+
+class MappingPassphraseInvalid(MithrilVeilError):
+    """Raised when a mapping file cannot be decrypted (e.g. wrong passphrase)."""
+
+
+class UnencryptedMappingRefused(MithrilVeilError):
+    """Raised when unencrypted mapping persistence is requested but not supported."""
+
+
+class InvalidEncryptedMappingPath(MithrilVeilError):
+    """Raised when a mapping output path does not use the required encrypted suffix."""

@@ -10,6 +10,7 @@ from app.core.gliner_config import validate_gliner_labels
 class AnonymizeMode(StrEnum):
     REPLACE = "replace"
     REDACT = "redact"
+    PSEUDONYMIZE = "pseudonymize"
 
 
 class PresetDetectorsResponse(BaseModel):
@@ -30,7 +31,10 @@ class AnonymizeRequest(BaseModel):
     text: str = Field(..., min_length=1, description="Input text to anonymize")
     mode: AnonymizeMode = Field(
         default=AnonymizeMode.REPLACE,
-        description="replace: typed placeholders; redact: [REDACTED]",
+        description=(
+            "replace: typed placeholders; redact: [REDACTED]; "
+            "pseudonymize: placeholders with reversible mapping (no mapping in API response)"
+        ),
     )
     preset: str | None = Field(
         default=None,

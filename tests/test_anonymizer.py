@@ -95,6 +95,35 @@ def test_api_summary_counts():
     assert summary["detectors"].get("regex", 0) >= summary["total_entities"]
 
 
+def test_anonymize_pseudonymize_mode():
+    response = client.post(
+        "/api/v1/anonymize",
+        json={"text": SYNTHETIC_EMAIL_TEXT, "mode": "pseudonymize"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert "test@example.local" not in data["text"]
+    assert "[EMAIL_1]" in data["text"]
+    assert data["entities"][0]["replacement"] == "[EMAIL_1]"
+
+
+def test_api_pseudonymize_never_returns_mapping_payload():
+    text = f"Иван Тестович, ИНН {SYNTHETIC_INN_10}, test@example.local"
+    response = client.post(
+        "/api/v1/anonymize",
+        json={"text": text, "mode": "pseudonymize", "use_ner": True},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    raw = json.dumps(data, ensure_ascii=False)
+    assert "mapping" not in data
+    assert SYNTHETIC_INN_10 not in raw
+    assert "test@example.local" not in raw
+    assert "Иван Тестович" not in raw
+    for entity in data["entities"]:
+        assert entity["value_preview"] == "***"
+
+
 def test_invalid_inn_without_context_not_in_response():
     response = client.post(
         "/api/v1/anonymize",
