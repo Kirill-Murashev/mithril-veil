@@ -4,34 +4,35 @@
 
 **Mithril Veil: a self-hosted Russian PII anonymization gateway for safer AI workflows.**
 
-> **Status:** Pre-release / active development (0.1.x alpha). APIs and presets may change before a stable 1.0 release. See [CHANGELOG.md](CHANGELOG.md) and [docs/release_checklist.md](docs/release_checklist.md).
+Mithril Veil is an open-source, **local-first** service that detects and anonymizes sensitive information in **Russian-language text and documents** before you send content to cloud LLMs. Run it on your laptop or VPS: preprocessing stays on infrastructure you control, with a public codebase you can audit. It targets lawyers, appraisers, consultants, accountants, and small teams who need self-hosted sanitization instead of uploading raw client material to third-party APIs.
 
-Detect and anonymize sensitive information in Russian text before sending it to cloud LLMs. Designed for local or VPS deployment with a public, auditable codebase. See the [threat model](docs/threat_model.md) for security boundaries and residual risks.
+> **Status:** **v0.1.0 release candidate** — feature set for first public alpha is complete; APIs may still evolve before 1.0. See [CHANGELOG.md](CHANGELOG.md) and [docs/release_checklist.md](docs/release_checklist.md).
 
-## Warning
+## Security warnings
 
-**Do not commit real PII** to this repository — no real names, documents, bank data, passports, INN/SNILS, addresses, or reversible mapping files. Use synthetic fixtures only. Do not paste real documents into issues, tests, or examples. See [SECURITY.md](SECURITY.md).
+- **No real PII in this repository** — do not commit real names, INN/SNILS, passports, addresses, bank data, contracts, or client documents. Use synthetic examples only (`test@example.local`, fake IDs). Do not paste real documents into issues or PRs. See [SECURITY.md](SECURITY.md).
+- **Mapping files are highly sensitive** — `pseudonymize` with `--mapping-output` writes encrypted `.json.enc` files that can reverse placeholders. Treat them like key material; never commit them or attach them to issues.
+- **Restore / de-anonymization is not implemented** — design only: [docs/restore_workflow_design.md](docs/restore_workflow_design.md). There is no restore CLI and no API restore endpoint.
+- **Not implemented in 0.1.x:** OCR, web UI, format-preserving DOCX/PDF/RTF/ODT output, API file upload, server-side mapping storage, batch `pseudonymize`.
 
-## Features (0.1.x)
+## Features (0.1.0)
 
-- FastAPI HTTP API with health check and text anonymization
-- **CLI** for text, stdin, and file-based anonymization with safe JSON reports
-- **Document I/O** for `.txt`, `.md`, `.markdown`, **DOCX**, **RTF** (plain text only), and **text-based PDF** (output is plain text; formatting not preserved)
-- Deterministic regex/checksum detectors: email, phone, INN, SNILS, passport, OGRN/OGRNIP, KPP, BIK, bank/correspondent accounts, cards, cadastral/court/contract numbers, IP, URL, Telegram handles
-- **Optional local Natasha NER** for Russian PERSON, ORGANIZATION, LOCATION (disabled by default; probabilistic — review results)
-- **Optional GLiNER** zero-shot labels (`pip install -e ".[gliner]"`; disabled by default; may download Hugging Face weights on first use)
-- **Policy presets** (`general_ru`, `legal_ru`, `valuation_ru`, `banking_ru`, `court_case_ru`) for workflow-specific entity and detector profiles
-- INN/SNILS/OGRN/OGRNIP checksum validation; bank/correspondent account checksums when BIK is nearby; CARD_NUMBER Luhn validation
-- Priority-based span merging with confidence tie-breaking
-- Detection summary (`entity_counts`, `detectors`) in API and CLI reports
-- Modes: `replace` (typed placeholders), `redact`, and `pseudonymize` (reversible placeholders; optional encrypted CLI-only mapping — not irreversible anonymization)
-- API/CLI never expose original detected values (`value_preview` is always masked)
+- FastAPI HTTP API: health, presets, text anonymization
+- **CLI** for inline text, stdin, single files, and batch directories with safe JSON reports
+- **Document I/O:** `.txt`, `.md`, `.markdown`, `.docx`, `.odt`, `.rtf`, text-based `.pdf` (plain-text output; formatting not preserved)
+- Deterministic regex/checksum detectors: email, phone, INN, SNILS, passport, OGRN/OGRNIP, KPP, BIK, bank/correspondent accounts, cards (Luhn), cadastral/court/contract numbers, IP, URL, Telegram handles
+- **Optional Natasha NER** (PERSON, ORGANIZATION, LOCATION) and **optional GLiNER** zero-shot labels — disabled by default; review probabilistic results
+- **Policy presets:** `general_ru`, `legal_ru`, `valuation_ru`, `banking_ru`, `court_case_ru`
+- Modes: `replace`, `redact`, `pseudonymize` (reversible with CLI-only encrypted mapping)
+- API/CLI never expose original detected values (`value_preview` is always `***`)
+
+See the [threat model](docs/threat_model.md) for trust boundaries and residual risks.
 
 ## Requirements
 
 - Python 3.12+
 
-## Local installation
+## Installation (local / self-hosted)
 
 ```bash
 git clone https://github.com/Kirill-Murashev/mithril-veil.git
@@ -40,143 +41,115 @@ python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
 
-# Optional GLiNER support (local inference; model weights may download on first use):
+# Optional GLiNER (local inference; may download Hugging Face weights on first use):
 # pip install -e ".[dev,gliner]"
 cp .env.example .env   # optional
 ```
 
-## CLI
+Run the API on `127.0.0.1` for local use, or deploy to a VPS you control ([deployment guide](docs/deployment_vps.md)). No cloud LLM calls are made by the service.
 
-After editable install, the `mithril-veil` command is available:
+## CLI quickstart
+
+After `pip install -e ".[dev]"`, the `mithril-veil` command is available. Full synthetic examples: [docs/cli_examples.md](docs/cli_examples.md).
 
 ```bash
 mithril-veil version
-# Mithril Veil 0.1.0
-
 mithril-veil list-presets
-# general_ru      General RU
-# legal_ru        Legal RU
-# ...
 
-mithril-veil anonymize-text --text "Контакт: test@example.local" --mode replace --preset general_ru
-
+# Inline text
 mithril-veil anonymize-text \
-  --text "Иван Тестович работает в ООО Тестовая Организация." \
+  --text "Контакт: test@example.local, ИНН 7701010017" \
   --mode replace \
-  --use-ner
+  --preset general_ru
 
-# Preset for legal workflows (Natasha NER on by default for this preset):
-mithril-veil anonymize-text \
-  --text "Иван Тестович работает в ООО Тестовая Организация." \
-  --mode replace \
-  --preset legal_ru
-
-# Explicit flags override preset defaults (disable NER despite legal_ru default):
-mithril-veil anonymize-text \
-  --text "Иван Тестович работает в ООО Тестовая Организация." \
-  --mode replace \
-  --preset legal_ru \
-  --no-use-ner
-
-# GLiNER (requires [gliner] extra; probabilistic — review results):
-mithril-veil anonymize-text \
-  --text "Иван Тестович работает в ООО Тестовая Организация." \
-  --mode replace \
-  --use-gliner \
-  --gliner-label person \
-  --gliner-label organization
-
+# Stdin
 echo "Контакт: test@example.local" | mithril-veil anonymize-stdin --mode replace
 
+# Single file + safe report
 mithril-veil anonymize-file \
   --input examples/synthetic_input.txt \
   --output /tmp/anonymized.txt \
   --mode replace \
   --report /tmp/report.json
 
-# Batch directory (replace/redact only; no encrypted mapping in batch):
-mithril-veil anonymize-dir ./documents --output-dir ./sanitized \
-  --mode replace --report ./batch-report.json
+# Batch directory (replace/redact only)
+mithril-veil anonymize-dir ./documents \
+  --output-dir ./sanitized \
+  --mode replace \
+  --report ./batch-report.json
 ```
 
-- **`anonymize-dir`** — recursively processes supported files under a directory (case-insensitive extensions); writes `*.anonymized.txt` under `--output-dir`; optional aggregate safe `--report`. Skips symlinked files and hidden paths (unless `--include-hidden`); rejects duplicate output stems and unsafe report paths before processing. Supports **`replace` and `redact` only** (rejects `pseudonymize` and `--mapping-output`). Exit code `1` if any file fails. See [threat model](docs/threat_model.md).
-- Supported **input**: `.txt`, `.md`, `.markdown`, `.docx`, `.odt` (plain text from ZIP `content.xml`; stdlib XML; no embedded objects), `.rtf` (best-effort plain text via `striprtf`; UTF-8/cp1251; no embedded objects), `.pdf` (text-based only)
-- Supported **output**: `.txt`, `.md`, `.markdown` (sanitized plain text)
-- **Not supported**: OCR, image-only PDFs, encrypted PDFs, format-preserving DOCX/PDF/RTF/ODT output, embedded RTF/ODT objects/images
-- Limits: 10 MB max input size; 50 PDF pages max; ODT `content.xml` uncompressed cap 8 MB (compression-ratio guard)
-- The CLI refuses to overwrite the input file (`--output` must differ from `--input`)
-- Use `--force` to overwrite an existing output or report file
-- JSON reports never contain raw detected values (optional safe `source` and `policy` metadata only)
-- **`pseudonymize` + mapping (CLI only):** `--mode pseudonymize` with `--mapping-output path.json.enc` (suffix required); passphrase via `MITHRIL_VEIL_MAPPING_PASSPHRASE` or `--mapping-passphrase-env`. Mapping path must differ from `--input`, `--output`, and `--report`. The HTTP API never returns mapping data. Reports include only `mapping.written` / `mapping.encrypted` when a mapping file was written—never placeholder→original entries. Mapping files are gitignored (`mapping*.json`, `mapping*.json.enc`).
-- **Restore / de-anonymization:** **Not implemented** in 0.1.x. A design-only document for a possible future CLI restore workflow is in [docs/restore_workflow_design.md](docs/restore_workflow_design.md). Do not send restored text to cloud LLMs.
-- **`--preset`** selects a bundled YAML profile; **`list-presets`** lists available ids
-- Available presets: `general_ru`, `legal_ru`, `valuation_ru`, `banking_ru`, `court_case_ru`
-- Explicit `--use-ner`, `--no-use-ner`, `--use-gliner`, `--no-use-gliner`, and GLiNER flags override preset defaults
-- GLiNER remains disabled in all bundled presets unless you enable it explicitly
-- Natasha NER is probabilistic — always review results when enabled
+### Pseudonymize and encrypted mapping
+
+**Warning:** `pseudonymize` is **reversible** if you keep the mapping file and passphrase. For irreversible sanitization before a cloud LLM, use `replace` or `redact`. Mapping files must not be committed or uploaded to issue trackers.
 
 ```bash
+export MITHRIL_VEIL_MAPPING_PASSPHRASE="your-local-secret-only"
 mithril-veil anonymize-file \
-  --input input.docx \
-  --output sanitized.txt \
-  --mode replace \
-  --report report.json
-
-mithril-veil anonymize-file \
-  --input input.pdf \
-  --output sanitized.txt \
-  --mode replace \
-  --report report.json
+  --input examples/synthetic_input.txt \
+  --output /tmp/pseudonymized.txt \
+  --mode pseudonymize \
+  --mapping-output /tmp/mapping.json.enc \
+  --report /tmp/report.json
 ```
 
-## Running the API
+- `--mapping-output` must end with `.json.enc`; path must differ from input, output, and report
+- HTTP API never writes or returns mapping data
+- Batch `anonymize-dir` does **not** support `pseudonymize` or `--mapping-output`
+
+## Supported and unsupported inputs
+
+| Supported input | Notes |
+|-----------------|-------|
+| `.txt`, `.md`, `.markdown` | UTF-8 text |
+| `.docx` | Plain text via `python-docx` |
+| `.odt` | Plain text from ZIP `content.xml` (no embedded objects) |
+| `.rtf` | Plain text via `striprtf` (no embedded objects) |
+| `.pdf` | Text-based PDF only via `pypdf` (no OCR) |
+
+| Output | Plain sanitized `.txt` / `.md` / `.markdown` only |
+
+| Not supported | |
+|---------------|---|
+| OCR, image-only or encrypted PDFs | |
+| Format-preserving DOCX/PDF/RTF/ODT | |
+| Embedded RTF/ODT objects as extracted content | |
+| Web UI, API file upload, API restore | |
+| Batch `pseudonymize` or batch mapping | |
+
+Limits: 10 MB max input; 50 PDF pages max; ODT `content.xml` 8 MB cap with compression-ratio guard. CLI refuses to overwrite the input file (`--output` must differ from `--input`).
+
+## HTTP API
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/health` | Health and version |
+| GET | `/api/v1/presets` | Bundled preset metadata |
+| POST | `/api/v1/anonymize` | Anonymize JSON body (`replace`, `redact`, `pseudonymize`) |
+
+No file-upload endpoint. No restore endpoint. Responses mask all detected values (`value_preview`: `"***"`).
 
 ```bash
 uvicorn app.main:app --reload
-```
+curl -s http://127.0.0.1:8000/health
 
-Open http://127.0.0.1:8000/health
-
-### Example request
-
-```bash
 curl -s -X POST http://127.0.0.1:8000/api/v1/anonymize \
   -H "Content-Type: application/json" \
-  -d '{"text":"Иван Тестович: test@example.local, ИНН 7701010017","mode":"replace"}'
-
-# List presets:
-# curl -s http://127.0.0.1:8000/api/v1/presets
-
-# Use a preset (explicit use_ner overrides preset default):
-# -d '{"text":"Иван Тестович работает в ООО Тестовая Организация.","mode":"replace","preset":"legal_ru"}'
-# -d '{"text":"...","mode":"replace","preset":"legal_ru","use_ner":false}'
+  -d '{"text":"Контакт: test@example.local","mode":"replace"}'
 ```
 
-Example response shape:
+## Detectors and checksums
 
-```json
-{
-  "text": "...",
-  "entities": [
-    {
-      "type": "EMAIL",
-      "start": 0,
-      "end": 0,
-      "value_preview": "***",
-      "replacement": "[EMAIL_1]",
-      "detector": "regex",
-      "confidence": 0.85,
-      "metadata": {}
-    }
-  ],
-  "warnings": [],
-  "summary": {
-    "total_entities": 2,
-    "entity_counts": { "EMAIL": 1, "INN": 1 },
-    "detectors": { "regex": 2 }
-  }
-}
-```
+| Area | Behavior |
+|------|----------|
+| INN / SNILS | Checksum validation; weak candidates with context keywords |
+| OGRN / OGRNIP | Valid checksum required |
+| BANK_ACCOUNT / CORRESPONDENT_ACCOUNT | Checksum when BIK nearby (~120 chars); keyword context for settlement accounts |
+| CARD_NUMBER | Luhn-valid 13–19 digits; rejects all-identical digit strings |
+| BIK | Regex only (no directory validation) |
+| Natasha / GLiNER | Optional; probabilistic — review output |
+
+Priority span merger prefers deterministic identifiers over NER/GLiNER spans.
 
 ## Docker
 
@@ -187,67 +160,41 @@ curl -s http://127.0.0.1:8000/health
 
 Service listens on port **8000**.
 
-## Makefile
-
-After `pip install -e ".[dev]"`:
+## Development
 
 ```bash
 make check          # ruff + format check + compileall + pytest (no GLiNER download)
-make install        # pip install -e ".[dev]"
-make install-gliner # pip install -e ".[dev,gliner]"
-make lint           # ruff check
-make format         # ruff format
-make test           # pytest -v
-make run-api        # uvicorn app.main:app --reload
+make run-api
+python -m build     # dist/ is gitignored
 ```
 
-Install equivalents without Make:
-
-```bash
-pip install -e ".[dev]"
-pip install -e ".[dev,gliner]"   # optional GLiNER extra
-```
-
-## Package build
-
-```bash
-python -m pip install build
-python -m build
-```
-
-Produces `dist/` wheels and sdists (gitignored; do not commit).
-
-## Development
-
-Run the same gates as CI:
-
-```bash
-make check
-```
-
-Or individually:
+Individual gates:
 
 ```bash
 ruff check app tests
 ruff format --check app tests
 python -m compileall app
-pytest -v
+pytest -m 'not integration' -v
 ```
+
+Default CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the same checks without GLiNER. Optional GLiNER integration tests: manual [`.github/workflows/gliner-integration.yml`](.github/workflows/gliner-integration.yml).
 
 ## Documentation
 
+- [CLI examples (synthetic)](docs/cli_examples.md)
 - [Architecture](docs/architecture.md)
 - [Threat model](docs/threat_model.md)
 - [Russian PII taxonomy](docs/pii_taxonomy_ru.md)
-- [VPS deployment](docs/deployment_vps.md)
+- [Restore workflow design (no implementation)](docs/restore_workflow_design.md)
 - [Release checklist](docs/release_checklist.md)
 - [Security checklist](docs/security_checklist.md)
+- [VPS deployment](docs/deployment_vps.md)
 - [Roadmap](docs/roadmap.md)
 - [Changelog](CHANGELOG.md)
 
 ## Roadmap
 
-See [docs/roadmap.md](docs/roadmap.md) — de-anonymization design (planned).
+See [docs/roadmap.md](docs/roadmap.md). Post-v0.1.0: restore implementation (if approved), OCR, web UI, and format-preserving output remain **out of scope** unless separately approved and threat-modeled.
 
 ## License
 

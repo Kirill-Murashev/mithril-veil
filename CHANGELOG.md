@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Release candidate hygiene (Slice 16)** — README polish for v0.1.0 RC (self-hosted positioning, CLI quickstart, API/detector summaries, security warnings); [docs/cli_examples.md](docs/cli_examples.md) with synthetic CLI examples; expanded [docs/release_checklist.md](docs/release_checklist.md) and [docs/security_checklist.md](docs/security_checklist.md); roadmap/TODO updated for RC status.
 - **CARD_NUMBER Luhn validation (Slice 15)** — `validate_luhn` / `validate_card_number` in validators; `CardNumberDetector` emits only Luhn-valid candidates (13–19 digits; rejects all-identical digits).
 - **Restore workflow design (Slice 14)** — [docs/restore_workflow_design.md](docs/restore_workflow_design.md): security-first design for a possible future CLI-only de-anonymization workflow; no restore implementation, API endpoint, or mapping format changes.
 - **Deterministic identifier hardening (Slice 13)** — OGRN and OGRNIP checksum validation in regex detectors; bank/correspondent account checksum validators with optional nearby-BIK validation (isolated accounts without BIK context keep prior recall).

@@ -1,45 +1,81 @@
-# Release checklist (v0.1.x)
+# Release checklist (v0.1.0 release candidate)
 
-Use this checklist before tagging a release or publishing a GitHub release.
+Use this checklist before tagging **v0.1.0** or publishing a GitHub release.
 
-## Quality gates
+## Version consistency
 
-- [ ] Run `make check` locally (ruff, format check, compileall, pytest — no GLiNER model download)
-- [ ] Confirm default CI on `main` is green (see [ci.yml](../.github/workflows/ci.yml))
+- [ ] `app/__init__.py` `__version__` matches `pyproject.toml` `version` (currently **0.1.0**)
+- [ ] `mithril-veil version` and `GET /health` report the same version
+- [ ] `CHANGELOG.md` reflects shipped slices; Unreleased section accurate
 
-## Security and repository hygiene
+## Quality gates (local)
 
-- [ ] No real PII in the tree (names, documents, bank data, passports, INN/SNILS, addresses, reversible mappings)
-- [ ] No private user documents or logs committed (`data/private/` stays empty and gitignored)
-- [ ] README examples use synthetic data only (`test@example.local`, fake IDs)
-- [ ] Do not upload real documents, production logs, or mapping files to the release or CI artifacts
-
-## Smoke tests
-
-- [ ] Docker: `docker compose up --build` starts; `curl http://127.0.0.1:8000/health` returns OK
-- [ ] API: `POST /api/v1/anonymize` and `GET /api/v1/presets` behave as documented
-- [ ] CLI: `mithril-veil version` prints `0.1.0` (or current version)
-- [ ] CLI: `mithril-veil list-presets` lists bundled presets
-- [ ] CLI: sample `anonymize-text` / `anonymize-file` with `examples/synthetic_input.txt` succeeds
-
-## Package build (optional before tag)
+Run from a clean venv with `pip install -e ".[dev]"`:
 
 ```bash
-python -m pip install build
+ruff check app tests
+ruff format --check app tests
+python -m compileall app
+pytest -m 'not integration' -v
+make check
 python -m build
 ```
 
-- [ ] `dist/` artifacts look correct; do not commit `dist/` (gitignored)
+- [ ] `ruff check app tests` — pass
+- [ ] `ruff format --check app tests` — pass
+- [ ] `python -m compileall app` — pass
+- [ ] `pytest -m 'not integration'` — pass (expect **271 passed**, 1 deselected integration test)
+- [ ] `make check` — pass (lint + format + compile + pytest)
+- [ ] `python -m build` — pass; `dist/` artifacts look correct and are **not** committed (gitignored)
 
-## GitHub release
+## GitHub Actions
 
-- [ ] Update `CHANGELOG.md` (move items from Unreleased to version section)
+- [ ] Default [ci.yml](../.github/workflows/ci.yml) green on `main` (ruff, format, compileall, pytest)
+- [ ] Default CI installs **`.[dev]` only** — no GLiNER extra, no model weight download
+- [ ] [gliner-integration.yml](../.github/workflows/gliner-integration.yml) remains **manual** (`workflow_dispatch` only)
+
+## Package metadata
+
+- [ ] `pyproject.toml`: `readme = "README.md"`, Apache-2.0 license, `requires-python >=3.12`
+- [ ] Default `dependencies` do not pull GLiNER or Hugging Face weights
+- [ ] Optional extras: `[dev]`, `[gliner]` documented and correct
+
+## Documentation review
+
+- [ ] [README.md](../README.md) — install, CLI quickstart, synthetic examples only, limitations (restore/OCR/web UI/format-preserving)
+- [ ] [docs/cli_examples.md](cli_examples.md) — synthetic CLI examples current
+- [ ] [CHANGELOG.md](../CHANGELOG.md) — accurate for release candidate
+- [ ] [SECURITY.md](../SECURITY.md) — mapping, disclosure, no real PII
+- [ ] [docs/security_checklist.md](security_checklist.md) — pre-release section current
+- [ ] [docs/threat_model.md](threat_model.md) — matches 0.1.x behavior
+
+## Repository hygiene
+
+- [ ] No real PII in tree (names, INN/SNILS, passports, addresses, bank data)
+- [ ] No real user documents or production logs committed
+- [ ] No `mapping*.json` or `mapping*.json.enc` files committed
+- [ ] No passphrases in repo, CI logs, or issues
+- [ ] `data/private/` empty and gitignored
+- [ ] Examples and tests use synthetic fixtures only (`test@example.local`, public test card numbers)
+
+## Smoke tests
+
+- [ ] `mithril-veil version` prints `0.1.0`
+- [ ] `mithril-veil list-presets` lists five bundled presets
+- [ ] `mithril-veil anonymize-text` with synthetic string succeeds
+- [ ] `mithril-veil anonymize-file --input examples/synthetic_input.txt` succeeds
+- [ ] API: `GET /health`, `GET /api/v1/presets`, `POST /api/v1/anonymize` behave as documented
+- [ ] Optional: `docker compose up --build` and `curl http://127.0.0.1:8000/health`
+
+## Tag and GitHub release (when approved)
+
+- [ ] Move [CHANGELOG.md](../CHANGELOG.md) items from Unreleased to `[0.1.0]` if not already done
 - [ ] Tag: `git tag -a v0.1.0 -m "Mithril Veil 0.1.0"`
 - [ ] Push tag: `git push origin v0.1.0`
-- [ ] Create GitHub release from tag with notes from `CHANGELOG.md`
-- [ ] Attach **no** real documents, customer logs, or private data to the release
+- [ ] Create GitHub release from tag; notes from `CHANGELOG.md`
+- [ ] Attach **no** real documents, customer logs, mapping files, or private data to the release
 
 ## Post-release
 
-- [ ] Verify CI badge and release notes on the repository home page
-- [ ] Open a follow-up issue for any known limitations listed in `docs/roadmap.md`
+- [ ] CI badge green on repository home page
+- [ ] Track post-v0.1.0 items in [roadmap.md](roadmap.md) (restore implementation, OCR, web UI remain out of scope unless separately approved)

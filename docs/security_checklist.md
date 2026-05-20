@@ -2,47 +2,50 @@
 
 Use this checklist when changing detection, I/O, logging, mapping, CI, or release workflows. See also [SECURITY.md](../SECURITY.md) and the [threat model](threat_model.md).
 
-## Logging and runtime data
+## API, CLI output, and reports
 
 - [ ] Do not log original input text or full document content
 - [ ] Do not log raw detected entity values
-- [ ] API responses and CLI output use safe `value_preview` (masked, e.g. `***`) only
+- [ ] API responses and CLI entity listings use safe `value_preview` only — **`value_preview == "***"`** always
 - [ ] JSON reports never include raw detected values in any field
 - [ ] Warnings and error messages do not echo sensitive substrings from user input
-- [ ] Mapping passphrases never appear in logs, stderr, or exception messages
+- [ ] Mapping passphrases never appear in logs, stdout, stderr, or exception messages
+- [ ] Batch aggregate reports contain counts and safe metadata only — no raw text or per-entity values
 
 ## Repository and fixtures
 
 - [ ] Tests and `examples/` use **synthetic** data only
 - [ ] No real names, contracts, court files, bank statements, or valuation reports in the repo
-- [ ] No reversible mapping files committed (`mapping*.json`, `mapping*.json.enc`, and similar stay gitignored)
+- [ ] No reversible mapping files committed (`mapping*.json`, `mapping*.json.enc` stay gitignored)
 - [ ] Report metadata does not embed sensitive filenames or paths from user machines
+- [ ] No passphrases in repo, issues, PRs, or CI configuration
 
 ## CI and automation
 
 - [ ] Default CI ([ci.yml](../.github/workflows/ci.yml)) does **not** install GLiNER or download model weights
-- [ ] Default pytest run excludes `integration` tests (no network model fetch in PR checks)
+- [ ] Default pytest run excludes `integration` tests (`pytest -m 'not integration'` / `addopts` in `pyproject.toml`)
 - [ ] CI does not upload artifacts containing raw text, documents, or secrets
-- [ ] CI logs do not print environment secrets (including `MITHRIL_VEIL_MAPPING_PASSPHRASE`)
+- [ ] CI logs do not print `MITHRIL_VEIL_MAPPING_PASSPHRASE` or other secrets
+- [ ] Manual [gliner-integration.yml](../.github/workflows/gliner-integration.yml) only via `workflow_dispatch`
 
 ## GLiNER and optional ML
 
 - [ ] GLiNER remains optional (`[gliner]` extra); not required for core install or default CI
 - [ ] Document that first GLiNER use may download Hugging Face weights; pre-cache for air-gapped hosts
-- [ ] Manual [gliner-integration.yml](../.github/workflows/gliner-integration.yml) only via `workflow_dispatch`
 - [ ] Natasha/GLiNER outputs are probabilistic — operators must review results
+
+## Document parsers
+
+- [ ] Document parser errors are safe (no raw document/XML/RTF content in messages)
+- [ ] RTF: plain-text extraction only; no embedded object/image extraction as a product feature
+- [ ] ODT: `content.xml` text only; draw/image/object subtrees skipped; zip-bomb guards active
+- [ ] DOCX/PDF: plain-text extraction; no format-preserving output
 
 ## Private data handling
 
 - [ ] Real documents and mappings live **outside** the repo, or only under `data/private/` (gitignored)
 - [ ] Never commit contents of `data/private/`
 - [ ] VPS and local operators process files only on infrastructure they control
-
-## RTF ingestion
-
-- [ ] RTF input uses plain-text extraction only (`striprtf`); no format preservation or embedded object/image extraction
-- [ ] Malformed RTF is best-effort; `\\bin`/`\\pict`/`\\object` payloads must not appear in extracted text or errors
-- [ ] Empty or unreadable RTF fails with safe messages (no raw document content in errors)
 
 ## Batch CLI (`anonymize-dir`)
 
@@ -53,6 +56,14 @@ Use this checklist when changing detection, I/O, logging, mapping, CI, or releas
 - [ ] Duplicate output targets rejected before processing; `--report` not inside input or equal to an output path
 - [ ] Aggregate batch report contains no raw text or detected values; deterministic file entry ordering
 - [ ] Unsupported extensions are skipped with safe warnings only; exit code `1` if any file failed
+
+## Restore, API scope, and out-of-scope features
+
+- [ ] [restore_workflow_design.md](restore_workflow_design.md) exists; **no restore implementation** in 0.1.x
+- [ ] No restore CLI, batch restore, or **API restore endpoint**
+- [ ] **OCR** not implemented (image-only PDFs unsupported)
+- [ ] **Web UI** not implemented
+- [ ] **Format-preserving** DOCX/PDF/RTF/ODT output not implemented
 
 ## Cloud agents and third parties
 
@@ -84,14 +95,14 @@ Use when touching `pseudonymize` mode, `app/core/mapping.py`, `app/security/encr
   - No raw leakage in API/CLI/report — `tests/test_mapping_hardening.py`, `tests/test_anonymizer.py`, `tests/test_cli.py`
 - [ ] Production path uses **`app/security/encrypted_mapping.py` only** (no duplicate `mapping_io` writer)
 
-## Before release
+## Before release (v0.1.0 RC)
 
 - [ ] Run `make check` (or equivalent: ruff, compileall, pytest with default markers)
 - [ ] Confirm default CI workflow still excludes `integration` tests and does not install `[gliner]`
 - [ ] Grep or review that no known **synthetic** raw tokens were accidentally copied into generated report/log fixtures in the repo
 - [ ] Confirm no real PII in repository (manual spot-check of new tests/docs/examples)
-- [ ] Verify [README.md](../README.md) and [SECURITY.md](../SECURITY.md) warnings match current behavior (pseudonymize reversible, mapping CLI-only, GLiNER optional)
-- [ ] Verify [threat_model.md](threat_model.md) reflects any security-relevant behavior changes since last release
+- [ ] Verify [README.md](../README.md) and [SECURITY.md](../SECURITY.md) warnings match current behavior (pseudonymize reversible, mapping CLI-only, restore not implemented, GLiNER optional)
+- [ ] Verify [threat_model.md](threat_model.md) reflects security-relevant behavior for 0.1.x
 - [ ] Version strings consistent (`app/__version__`, `pyproject.toml`, release notes)
 
 ## Disclosure
