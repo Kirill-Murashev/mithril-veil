@@ -16,11 +16,11 @@
 - [x] **Slice 9: threat model and security regression documentation**
 - [x] **Slice 10: CLI batch directory anonymization** (`anonymize-dir`, no batch mapping)
 - [x] **Slice 10.1: batch CLI hardening** (symlinks, collisions, report safety, exit codes)
+- [x] **Slice 11: RTF text ingestion** (plain text via `striprtf`; no embedded objects/OCR)
 - [x] Synthetic test fixtures only
 
 ## Next
 
-- RTF ingestion (safe text extraction; synthetic fixtures only)
 - OGRN/OGRNIP/BANK_ACCOUNT checksum validation (detection hardening)
 - De-anonymization **design document only** (no product implementation yet)
 

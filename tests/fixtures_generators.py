@@ -5,6 +5,13 @@ from pathlib import Path
 SYNTHETIC_CONTACT_LINE = "Контакт: test@example.local"
 
 
+def write_synthetic_rtf(path: Path, text: str = SYNTHETIC_CONTACT_LINE) -> None:
+    """Write a minimal synthetic RTF fixture (plain-text extraction only)."""
+    escaped = text.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
+    body = f"{{\\rtf1\\ansi {escaped}}}"
+    path.write_text(body, encoding="utf-8")
+
+
 def write_synthetic_docx(path: Path, text: str = SYNTHETIC_CONTACT_LINE) -> None:
     from docx import Document
 

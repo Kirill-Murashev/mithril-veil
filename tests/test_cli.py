@@ -282,7 +282,35 @@ def test_anonymize_file_rejects_overwrite_report(tmp_path):
     assert code == 2
 
 
-def test_unsupported_rtf_exit_code_2(tmp_path):
+def test_anonymize_file_rtf_to_txt(tmp_path):
+    from tests.fixtures_generators import write_synthetic_rtf
+
+    input_path = tmp_path / "in.rtf"
+    output_path = tmp_path / "out.txt"
+    report_path = tmp_path / "report.json"
+    write_synthetic_rtf(input_path)
+    code, _, err = run_main(
+        "anonymize-file",
+        "--input",
+        str(input_path),
+        "--output",
+        str(output_path),
+        "--mode",
+        "replace",
+        "--report",
+        str(report_path),
+    )
+    assert code == 0
+    out_text = output_path.read_text(encoding="utf-8")
+    assert "[EMAIL_1]" in out_text
+    assert SYNTHETIC_EMAIL not in out_text
+    assert SYNTHETIC_EMAIL not in err
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["source"]["input_type"] == "rtf"
+    assert SYNTHETIC_EMAIL not in json.dumps(report)
+
+
+def test_anonymize_file_empty_rtf_fails_safely(tmp_path):
     input_path = tmp_path / "in.rtf"
     output_path = tmp_path / "out.txt"
     input_path.write_text("{\\rtf1}", encoding="utf-8")
@@ -296,7 +324,7 @@ def test_unsupported_rtf_exit_code_2(tmp_path):
         "replace",
     )
     assert code == 2
-    assert "RTF" in err
+    assert "extractable text" in err.lower() or "empty" in err.lower()
     assert SYNTHETIC_EMAIL not in err
 
 

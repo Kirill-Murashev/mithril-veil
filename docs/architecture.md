@@ -56,7 +56,7 @@ Internal `DetectedEntity.text` is used only in-process. It must not be logged, p
 | `.txt`, `.md` | UTF-8 | Direct read |
 | `.docx` | `python-docx` | Paragraphs + table cells → plain text |
 | `.pdf` | `pypdf` | Text extraction only; no OCR |
-| `.rtf` | — | Unsupported |
+| `.rtf` | `striprtf` | Plain text only; no embedded objects/images; empty extract → `EmptyExtractedText` |
 | Encrypted PDF | — | Rejected |
 | Image-only PDF | — | Rejected (no extractable text) |
 
@@ -82,7 +82,7 @@ Passphrase for encrypted mapping files comes from an environment variable (defau
 mithril-veil anonymize-dir INPUT_DIR --output-dir OUTPUT_DIR
   → validate resolved input/output directories (no nesting; no .. bypass)
   → walk without following symlinks; skip symlinked files; skip hidden paths unless --include-hidden
-  → collect supported files (case-insensitive extensions)
+  → collect supported files (.txt, .md, .markdown, .docx, .pdf, .rtf; case-insensitive extensions)
   → preflight duplicate output targets and output writability
   → skip unsupported extensions with safe warnings
   → per file: read_document_file → run_anonymization (replace/redact only)

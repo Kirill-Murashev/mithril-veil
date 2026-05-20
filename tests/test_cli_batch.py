@@ -6,7 +6,11 @@ import json
 from pathlib import Path
 
 from app.cli.main import main
-from tests.fixtures_generators import write_synthetic_docx, write_synthetic_pdf
+from tests.fixtures_generators import (
+    write_synthetic_docx,
+    write_synthetic_pdf,
+    write_synthetic_rtf,
+)
 
 SYNTHETIC_TEXT = "Контакт: test@example.local"
 SYNTHETIC_EMAIL = "test@example.local"
@@ -36,7 +40,7 @@ def _setup_batch_input(tmp_path: Path) -> Path:
     (root / "plain.txt").write_text(SYNTHETIC_TEXT, encoding="utf-8")
     (root / "nested" / "note.md").write_text(f"Phone {SYNTHETIC_PHONE}", encoding="utf-8")
     (root / "unsupported.csv").write_text("col1,col2", encoding="utf-8")
-    (root / "bad.rtf").write_text("{\\rtf1}", encoding="utf-8")
+    write_synthetic_rtf(root / "nested" / "contact.rtf")
     write_synthetic_docx(root / "nested" / "doc.docx")
     write_synthetic_pdf(root / "scan.pdf")
     return root
@@ -63,19 +67,24 @@ def test_batch_processes_supported_types_and_skips_unsupported(tmp_path: Path):
     plain_out = output_dir / "plain.anonymized.txt"
     nested_md = output_dir / "nested" / "note.anonymized.txt"
     doc_out = output_dir / "nested" / "doc.anonymized.txt"
+    rtf_out = output_dir / "nested" / "contact.anonymized.txt"
     pdf_out = output_dir / "scan.anonymized.txt"
     assert plain_out.is_file()
     assert nested_md.is_file()
     assert doc_out.is_file()
+    assert rtf_out.is_file()
     assert pdf_out.is_file()
+    assert SYNTHETIC_EMAIL not in rtf_out.read_text(encoding="utf-8")
     assert SYNTHETIC_EMAIL not in plain_out.read_text(encoding="utf-8")
     assert "[EMAIL_1]" in plain_out.read_text(encoding="utf-8")
     assert SYNTHETIC_PHONE not in nested_md.read_text(encoding="utf-8")
 
     report = json.loads(report_path.read_text(encoding="utf-8"))
     assert report["report_type"] == "batch"
-    assert report["processed_count"] == 4
-    assert report["skipped_count"] >= 2
+    assert report["processed_count"] == 5
+    assert report["skipped_count"] >= 1
+    rtf_entries = [f for f in report["files"] if f["relative_path"].endswith(".rtf")]
+    assert any(e["status"] == "processed" for e in rtf_entries)
     assert SYNTHETIC_EMAIL not in json.dumps(report)
     assert SYNTHETIC_PHONE not in json.dumps(report)
 
@@ -303,6 +312,43 @@ def test_batch_max_files_limit(tmp_path: Path):
     )
     assert code == 1
     assert "limit" in err.lower()
+
+
+def test_batch_processes_rtf_uppercase_extension(tmp_path: Path):
+    input_dir = tmp_path / "in"
+    input_dir.mkdir()
+    write_synthetic_rtf(input_dir / "NOTE.RTF")
+    output_dir = tmp_path / "out"
+    code, _, err = run_main(
+        "anonymize-dir",
+        str(input_dir),
+        "--output-dir",
+        str(output_dir),
+        "--mode",
+        "replace",
+    )
+    assert code == 0
+    assert (output_dir / "NOTE.anonymized.txt").is_file()
+    assert SYNTHETIC_EMAIL not in err
+
+
+def test_batch_empty_rtf_fails_without_raw_leak(tmp_path: Path):
+    input_dir = tmp_path / "in"
+    input_dir.mkdir()
+    (input_dir / "empty.rtf").write_text("{\\rtf1}", encoding="utf-8")
+    (input_dir / "good.txt").write_text(SYNTHETIC_TEXT, encoding="utf-8")
+    output_dir = tmp_path / "out"
+    code, _, err = run_main(
+        "anonymize-dir",
+        str(input_dir),
+        "--output-dir",
+        str(output_dir),
+        "--mode",
+        "replace",
+    )
+    assert code == 1
+    assert (output_dir / "good.anonymized.txt").is_file()
+    assert SYNTHETIC_EMAIL not in err
 
 
 def test_batch_case_insensitive_extensions(tmp_path: Path):

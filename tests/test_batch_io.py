@@ -19,7 +19,7 @@ from app.document_io.batch import (
 
 
 def test_is_supported_batch_input_case_insensitive(tmp_path: Path):
-    for name in ("doc.TXT", "note.Md", "paper.PDF", "sheet.DOCX"):
+    for name in ("doc.TXT", "note.Md", "paper.PDF", "sheet.DOCX", "memo.RTF"):
         path = tmp_path / name
         path.write_text("x", encoding="utf-8")
         assert is_supported_batch_input(path)

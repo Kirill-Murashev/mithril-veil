@@ -38,6 +38,11 @@ Use this checklist when changing detection, I/O, logging, mapping, CI, or releas
 - [ ] Never commit contents of `data/private/`
 - [ ] VPS and local operators process files only on infrastructure they control
 
+## RTF ingestion
+
+- [ ] RTF input uses plain-text extraction only (`striprtf`); no format preservation or embedded object/image extraction
+- [ ] Empty or unreadable RTF fails with safe messages (no raw document content in errors)
+
 ## Batch CLI (`anonymize-dir`)
 
 - [ ] Batch supports **replace** and **redact** only; reject `pseudonymize` and `--mapping-output`

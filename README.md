@@ -16,7 +16,7 @@ Detect and anonymize sensitive information in Russian text before sending it to 
 
 - FastAPI HTTP API with health check and text anonymization
 - **CLI** for text, stdin, and file-based anonymization with safe JSON reports
-- **Document I/O** for `.txt`, `.md`, `.markdown`, **DOCX**, and **text-based PDF** (output is plain text; formatting not preserved)
+- **Document I/O** for `.txt`, `.md`, `.markdown`, **DOCX**, **RTF** (plain text only), and **text-based PDF** (output is plain text; formatting not preserved)
 - Deterministic regex/checksum detectors: email, phone, INN, SNILS, passport, OGRN/OGRNIP, KPP, BIK, bank/correspondent accounts, cards, cadastral/court/contract numbers, IP, URL, Telegram handles
 - **Optional local Natasha NER** for Russian PERSON, ORGANIZATION, LOCATION (disabled by default; probabilistic — review results)
 - **Optional GLiNER** zero-shot labels (`pip install -e ".[gliner]"`; disabled by default; may download Hugging Face weights on first use)
@@ -100,9 +100,9 @@ mithril-veil anonymize-dir ./documents --output-dir ./sanitized \
 ```
 
 - **`anonymize-dir`** — recursively processes supported files under a directory (case-insensitive extensions); writes `*.anonymized.txt` under `--output-dir`; optional aggregate safe `--report`. Skips symlinked files and hidden paths (unless `--include-hidden`); rejects duplicate output stems and unsafe report paths before processing. Supports **`replace` and `redact` only** (rejects `pseudonymize` and `--mapping-output`). Exit code `1` if any file fails. See [threat model](docs/threat_model.md).
-- Supported **input**: `.txt`, `.md`, `.markdown`, `.docx`, `.pdf` (text-based only)
+- Supported **input**: `.txt`, `.md`, `.markdown`, `.docx`, `.rtf` (plain text extraction via `striprtf`), `.pdf` (text-based only)
 - Supported **output**: `.txt`, `.md`, `.markdown` (sanitized plain text)
-- **Not supported**: OCR, image-only PDFs, encrypted PDFs, `.rtf`
+- **Not supported**: OCR, image-only PDFs, encrypted PDFs, format-preserving DOCX/PDF/RTF output, embedded RTF objects/images
 - Limits: 10 MB max input size; 50 PDF pages max
 - The CLI refuses to overwrite the input file (`--output` must differ from `--input`)
 - Use `--force` to overwrite an existing output or report file
@@ -246,7 +246,7 @@ pytest -v
 
 ## Roadmap
 
-See [docs/roadmap.md](docs/roadmap.md) — batch CLI, RTF, de-anonymization design (planned).
+See [docs/roadmap.md](docs/roadmap.md) — de-anonymization design (planned).
 
 ## License
 

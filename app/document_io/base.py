@@ -14,6 +14,7 @@ SUPPORTED_INPUT_EXTENSIONS: dict[str, str] = {
     ".markdown": "markdown",
     ".docx": "docx",
     ".pdf": "pdf",
+    ".rtf": "rtf",
 }
 
 SUPPORTED_OUTPUT_EXTENSIONS: frozenset[str] = frozenset({".txt", ".md", ".markdown"})
@@ -26,12 +27,10 @@ def detect_supported_file_type(path: Path) -> str:
     suffix = path.suffix.lower()
     if suffix in SUPPORTED_INPUT_EXTENSIONS:
         return SUPPORTED_INPUT_EXTENSIONS[suffix]
-    if suffix == ".rtf":
-        raise UnsupportedDocumentType("RTF is not supported.")
     if suffix:
         raise UnsupportedDocumentType(f"Unsupported file type: {suffix}")
     raise UnsupportedDocumentType(
-        "File has no extension; supported types: .txt, .md, .markdown, .docx, .pdf"
+        "File has no extension; supported types: .txt, .md, .markdown, .docx, .pdf, .rtf"
     )
 
 
@@ -133,6 +132,10 @@ def read_document_file(path: Path) -> tuple[str, SourceMetadata]:
 
         text, page_count = read_pdf_text(path)
         source["page_count"] = page_count
+    elif input_type == "rtf":
+        from app.document_io.rtf import read_rtf_text
+
+        text = read_rtf_text(path)
     else:
         raise UnsupportedDocumentType(f"Unsupported input type: {input_type}")
 

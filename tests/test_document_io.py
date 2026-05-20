@@ -17,11 +17,13 @@ from app.document_io.base import (
 from app.document_io.docx import read_docx_text
 from app.document_io.limits import MAX_INPUT_FILE_BYTES, MAX_PDF_PAGES
 from app.document_io.pdf import read_pdf_text
+from app.document_io.rtf import read_rtf_text
 from tests.fixtures_generators import (
     write_blank_pdf,
     write_encrypted_pdf,
     write_synthetic_docx,
     write_synthetic_pdf,
+    write_synthetic_rtf,
 )
 
 SYNTHETIC_EMAIL = "test@example.local"
@@ -49,6 +51,18 @@ def test_detect_supported_pdf(tmp_path):
     path = tmp_path / "sample.pdf"
     write_synthetic_pdf(path)
     assert detect_supported_file_type(path) == "pdf"
+
+
+def test_detect_supported_rtf(tmp_path):
+    path = tmp_path / "sample.rtf"
+    write_synthetic_rtf(path)
+    assert detect_supported_file_type(path) == "rtf"
+
+
+def test_detect_supported_rtf_uppercase_extension(tmp_path):
+    path = tmp_path / "SAMPLE.RTF"
+    write_synthetic_rtf(path)
+    assert detect_supported_file_type(path) == "rtf"
 
 
 def test_read_docx_extracts_synthetic_text(tmp_path):
@@ -138,11 +152,52 @@ def test_read_write_txt_roundtrip(tmp_path):
     assert "[EMAIL_1]" in output_path.read_text(encoding="utf-8")
 
 
-def test_rtf_unsupported(tmp_path):
-    path = tmp_path / "file.rtf"
+def test_read_rtf_extracts_synthetic_text(tmp_path):
+    path = tmp_path / "in.rtf"
+    write_synthetic_rtf(path)
+    text = read_rtf_text(path)
+    assert SYNTHETIC_EMAIL in text
+
+
+def test_read_document_file_rtf_metadata(tmp_path):
+    path = tmp_path / "in.rtf"
+    write_synthetic_rtf(path)
+    text, source = read_document_file(path)
+    assert SYNTHETIC_EMAIL in text
+    assert source["input_type"] == "rtf"
+    assert source["file_size_bytes"] > 0
+
+
+def test_empty_rtf_raises(tmp_path):
+    path = tmp_path / "empty.rtf"
     path.write_text("{\\rtf1}", encoding="utf-8")
-    with pytest.raises(UnsupportedDocumentType, match="RTF"):
-        detect_supported_file_type(path)
+    with pytest.raises(EmptyExtractedText):
+        read_rtf_text(path)
+
+
+def test_empty_rtf_file_bytes_raises(tmp_path):
+    path = tmp_path / "blank.rtf"
+    path.write_bytes(b"   ")
+    with pytest.raises(EmptyExtractedText):
+        read_rtf_text(path)
+
+
+def test_rtf_binary_blob_does_not_crash(tmp_path):
+    path = tmp_path / "with_bin.rtf"
+    path.write_text(
+        "{\\rtf1\\ansi Contact: test@example.local \\bin8 0102030405060708}",
+        encoding="utf-8",
+    )
+    text = read_rtf_text(path)
+    assert SYNTHETIC_EMAIL in text
+
+
+def test_rtf_error_messages_contain_no_raw_email(tmp_path):
+    path = tmp_path / "empty.rtf"
+    path.write_text("{\\rtf1}", encoding="utf-8")
+    with pytest.raises(EmptyExtractedText) as exc_info:
+        read_rtf_text(path)
+    assert SYNTHETIC_EMAIL not in str(exc_info.value)
 
 
 def test_unsupported_output_extension(tmp_path):
