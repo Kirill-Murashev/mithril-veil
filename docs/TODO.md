@@ -1,5 +1,6 @@
 # Implementation backlog
 
+- [x] Slice 7: CI and release hygiene (workflows, `make check`, CHANGELOG, release/security docs)
 - [x] Wire YAML presets (`app/presets/*.yml`) into the detection pipeline
 - OGRN/OGRNIP/BANK_ACCOUNT checksum validation with BIK linkage
 - Luhn validation for CARD_NUMBER

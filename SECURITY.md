@@ -11,6 +11,8 @@ Do **not** include real personal data, real documents, real bank statements, con
 
 Use **synthetic** placeholders only (e.g. `test@example.local`, obviously fake IDs).
 
+For contributor and release checks, see [docs/security_checklist.md](docs/security_checklist.md).
+
 ## Mapping files
 
 Reversible anonymization mapping files must never be committed. Patterns such as `mapping*.json` are gitignored.

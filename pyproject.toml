@@ -3,14 +3,13 @@ name = "mithril-veil"
 version = "0.1.0"
 description = "Self-hosted Russian PII anonymization gateway for safer AI workflows"
 readme = "README.md"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 requires-python = ">=3.12"
 authors = [{ name = "Mithril Veil Contributors" }]
 keywords = ["pii", "anonymization", "russian", "privacy", "llm"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3.12",
     "Topic :: Security",
 ]
@@ -25,8 +24,12 @@ dependencies = [
     "natasha>=1.6.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/Kirill-Murashev/mithril-veil"
+
 [project.optional-dependencies]
 dev = [
+    "build>=1.2.0",
     "pytest>=8.3.0",
     "httpx>=0.27.0",
     "ruff>=0.8.0",

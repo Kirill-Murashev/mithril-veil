@@ -1,6 +1,10 @@
 # Mithril Veil
 
+![CI](https://github.com/Kirill-Murashev/mithril-veil/actions/workflows/ci.yml/badge.svg)
+
 **Mithril Veil: a self-hosted Russian PII anonymization gateway for safer AI workflows.**
+
+> **Status:** Pre-release / active development (0.1.x alpha). APIs and presets may change before a stable 1.0 release. See [CHANGELOG.md](CHANGELOG.md) and [docs/release_checklist.md](docs/release_checklist.md).
 
 Detect and anonymize sensitive information in Russian text before sending it to cloud LLMs. Designed for local or VPS deployment with a public, auditable codebase.
 
@@ -170,17 +174,57 @@ Example response shape:
 ## Docker
 
 ```bash
-docker compose up --build
+docker compose up --build -d
+curl -s http://127.0.0.1:8000/health
 ```
 
 Service listens on port **8000**.
 
+## Makefile
+
+After `pip install -e ".[dev]"`:
+
+```bash
+make check          # ruff + format check + compileall + pytest (no GLiNER download)
+make install        # pip install -e ".[dev]"
+make install-gliner # pip install -e ".[dev,gliner]"
+make lint           # ruff check
+make format         # ruff format
+make test           # pytest -v
+make run-api        # uvicorn app.main:app --reload
+```
+
+Install equivalents without Make:
+
+```bash
+pip install -e ".[dev]"
+pip install -e ".[dev,gliner]"   # optional GLiNER extra
+```
+
+## Package build
+
+```bash
+python -m pip install build
+python -m build
+```
+
+Produces `dist/` wheels and sdists (gitignored; do not commit).
+
 ## Development
+
+Run the same gates as CI:
+
+```bash
+make check
+```
+
+Or individually:
 
 ```bash
 ruff check app tests
-ruff format app tests
-pytest
+ruff format --check app tests
+python -m compileall app
+pytest -v
 ```
 
 ## Documentation
@@ -189,7 +233,10 @@ pytest
 - [Threat model](docs/threat_model.md)
 - [Russian PII taxonomy](docs/pii_taxonomy_ru.md)
 - [VPS deployment](docs/deployment_vps.md)
+- [Release checklist](docs/release_checklist.md)
+- [Security checklist](docs/security_checklist.md)
 - [Roadmap](docs/roadmap.md)
+- [Changelog](CHANGELOG.md)
 
 ## Roadmap
 

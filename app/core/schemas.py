@@ -3,6 +3,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from app import __version__
 from app.core.gliner_config import validate_gliner_labels
 
 
@@ -101,4 +102,4 @@ class AnonymizeResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: Literal["ok"] = "ok"
     service: str = "mithril-veil"
-    version: str = "0.1.0"
+    version: str = Field(default=__version__)

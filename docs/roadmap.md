@@ -11,6 +11,7 @@
 - [x] **Slice 4B: optional Natasha NER** (PERSON, ORGANIZATION, LOCATION)
 - [x] **Slice 5: optional GLiNER** zero-shot labels
 - [x] **Slice 6: policy presets** and profile-based entity/detector configuration
+- [x] **Slice 7: CI and release hygiene** (GitHub Actions, Makefile, CHANGELOG, release/security checklists)
 - [x] Synthetic test fixtures only
 
 ## Next

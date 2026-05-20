@@ -5,6 +5,10 @@
 - Python 3.12+ or Docker
 - Reverse proxy (nginx, Caddy) with TLS recommended
 
+## Local verification before deploy
+
+From a development checkout, run `make check` after `pip install -e ".[dev]"` to match CI (ruff, format check, compileall, pytest).
+
 ## Docker
 
 ```bash
