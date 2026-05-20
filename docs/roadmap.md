@@ -22,9 +22,11 @@
 - [x] **Slice 12.1: ODT ingestion hardening** (zip-bomb checks, malformed XML, embedded object ignoring, batch safety)
 - [x] Synthetic test fixtures only
 - [x] **Slice 13: deterministic identifier hardening** (OGRN/OGRNIP checksums; bank/correspondent account checksums when BIK is nearby)
+- [x] **Slice 14: de-anonymization / restore workflow design document only** ([restore_workflow_design.md](restore_workflow_design.md); no implementation)
 
 ## Next
-- De-anonymization **design document only** (no product implementation yet)
+- CARD_NUMBER Luhn validation (Slice 15 — small deterministic hardening)
+- Release candidate hygiene for v0.1.0 (Slice 16)
 
 ## Later
 

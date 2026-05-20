@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Restore workflow design (Slice 14)** — [docs/restore_workflow_design.md](docs/restore_workflow_design.md): security-first design for a possible future CLI-only de-anonymization workflow; no restore implementation, API endpoint, or mapping format changes.
 - **Deterministic identifier hardening (Slice 13)** — OGRN and OGRNIP checksum validation in regex detectors; bank/correspondent account checksum validators with optional nearby-BIK validation (isolated accounts without BIK context keep prior recall).
 - **ODT text ingestion (Slice 12)** — `.odt` input via ZIP `content.xml` plain-text extraction (`zipfile` + stdlib XML) for `anonymize-file` and `anonymize-dir` (paragraphs, headings, tables; no formatting, embedded objects, or images).
 - **RTF text ingestion (Slice 11)** — `.rtf` input via `striprtf` plain-text extraction for `anonymize-file` and `anonymize-dir` (no formatting, embedded objects, or images).

@@ -77,7 +77,11 @@ Canonical encryption module: **`app/security/encrypted_mapping.py`** (PBKDF2 + F
 | CLI `replace` / `redact` | No | No | No mapping block |
 | CLI `pseudonymize` | Yes | Only with `--mapping-output` (`.json.enc`) | `mapping.written` / `mapping.encrypted` only |
 
-Passphrase for encrypted mapping files comes from an environment variable (default `MITHRIL_VEIL_MAPPING_PASSPHRASE`, override `--mapping-passphrase-env`). Mapping output path must differ from input, anonymized output, and report paths. Original span text never appears in stdout, stderr, API JSON, or report JSON. **`pseudonymize` is reversible** when a mapping file exists; the API does not write or return mappings. No OCR, image-only PDF, or encrypted PDF ingestion.
+Passphrase for encrypted mapping files comes from an environment variable (default `MITHRIL_VEIL_MAPPING_PASSPHRASE`, override `--mapping-passphrase-env`). Mapping output path must differ from input, anonymized output, and report paths. Original span text never appears in stdout, stderr, API JSON, or report JSON. **`pseudonymize` is reversible** when a mapping file exists; the API does not write or return mappings.
+
+**Restore / de-anonymization:** Not implemented. A security-first design for a possible future CLI-only restore workflow is in [restore_workflow_design.md](restore_workflow_design.md) (Slice 14, design only). No restore command, API endpoint, or batch restore exists in 0.1.x.
+
+No OCR, image-only PDF, or encrypted PDF ingestion.
 
 ## CLI batch flow (Slice 10 / 10.1)
 

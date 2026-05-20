@@ -108,6 +108,7 @@ mithril-veil anonymize-dir ./documents --output-dir ./sanitized \
 - Use `--force` to overwrite an existing output or report file
 - JSON reports never contain raw detected values (optional safe `source` and `policy` metadata only)
 - **`pseudonymize` + mapping (CLI only):** `--mode pseudonymize` with `--mapping-output path.json.enc` (suffix required); passphrase via `MITHRIL_VEIL_MAPPING_PASSPHRASE` or `--mapping-passphrase-env`. Mapping path must differ from `--input`, `--output`, and `--report`. The HTTP API never returns mapping data. Reports include only `mapping.written` / `mapping.encrypted` when a mapping file was written—never placeholder→original entries. Mapping files are gitignored (`mapping*.json`, `mapping*.json.enc`).
+- **Restore / de-anonymization:** **Not implemented** in 0.1.x. A design-only document for a possible future CLI restore workflow is in [docs/restore_workflow_design.md](docs/restore_workflow_design.md). Do not send restored text to cloud LLMs.
 - **`--preset`** selects a bundled YAML profile; **`list-presets`** lists available ids
 - Available presets: `general_ru`, `legal_ru`, `valuation_ru`, `banking_ru`, `court_case_ru`
 - Explicit `--use-ner`, `--no-use-ner`, `--use-gliner`, `--no-use-gliner`, and GLiNER flags override preset defaults
