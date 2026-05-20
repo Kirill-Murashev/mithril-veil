@@ -1,10 +1,19 @@
-# General Russian text preset — entity types enabled for detection
-# TODO: wire presets into pipeline (see docs/TODO.md)
-name: general_ru
-description: General-purpose Russian PII detection
+id: general_ru
+name: General RU
+description: Conservative general-purpose Russian PII detection profile.
 enabled_entities:
   - EMAIL
   - PHONE
   - INN
   - SNILS
   - PASSPORT_RU
+detectors:
+  regex: true
+  natasha: false
+  gliner: false
+gliner:
+  labels: []
+  threshold: 0.5
+notes:
+  - Structured identifiers only; NER disabled by default.
+  - Enable --use-ner or --use-gliner explicitly to override.

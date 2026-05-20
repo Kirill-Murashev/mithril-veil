@@ -10,7 +10,7 @@ SYNTHETIC_EMAIL = "test@example.local"
 
 def test_report_shape_and_safety():
     text = f"Контакт: {SYNTHETIC_EMAIL}, ИНН {SYNTHETIC_INN_10}."
-    response = run_anonymization(text, AnonymizeMode.REPLACE)
+    response, _policy = run_anonymization(text, AnonymizeMode.REPLACE)
     report = build_anonymization_report(response, AnonymizeMode.REPLACE)
 
     assert report["service"] == "mithril-veil"
@@ -33,7 +33,7 @@ def test_report_shape_and_safety():
 
 def test_report_includes_safe_source_metadata():
     text = f"Контакт: {SYNTHETIC_EMAIL}."
-    response = run_anonymization(text, AnonymizeMode.REPLACE)
+    response, _policy = run_anonymization(text, AnonymizeMode.REPLACE)
     report = build_anonymization_report(
         response,
         AnonymizeMode.REPLACE,

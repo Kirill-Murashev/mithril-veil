@@ -27,6 +27,10 @@
 | ORGANIZATION | Legal entity names | natasha, gliner (optional) | probabilistic NER |
 | LOCATION | Places (NER) | natasha, gliner (optional) | probabilistic NER |
 
+## Policy presets
+
+Bundled presets (`general_ru`, `legal_ru`, `valuation_ru`, `banking_ru`, `court_case_ru`) enable subsets of the types above and set default NER/GLiNER flags. Entity types not listed in a preset are filtered out after detection. Explicit API/CLI flags override preset defaults.
+
 ## NER notes (Natasha / GLiNER)
 
 - Natasha: `use_ner=true` / `--use-ner` — Russian news models, local only.

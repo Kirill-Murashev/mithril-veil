@@ -16,6 +16,7 @@ Detect and anonymize sensitive information in Russian text before sending it to 
 - Deterministic regex/checksum detectors: email, phone, INN, SNILS, passport, OGRN/OGRNIP, KPP, BIK, bank/correspondent accounts, cards, cadastral/court/contract numbers, IP, URL, Telegram handles
 - **Optional local Natasha NER** for Russian PERSON, ORGANIZATION, LOCATION (disabled by default; probabilistic — review results)
 - **Optional GLiNER** zero-shot labels (`pip install -e ".[gliner]"`; disabled by default; may download Hugging Face weights on first use)
+- **Policy presets** (`general_ru`, `legal_ru`, `valuation_ru`, `banking_ru`, `court_case_ru`) for workflow-specific entity and detector profiles
 - INN/SNILS checksum validation with context-aware weak candidates
 - Priority-based span merging with confidence tie-breaking
 - Detection summary (`entity_counts`, `detectors`) in API and CLI reports
@@ -48,12 +49,30 @@ After editable install, the `mithril-veil` command is available:
 mithril-veil version
 # Mithril Veil 0.1.0
 
-mithril-veil anonymize-text --text "Контакт: test@example.local" --mode replace
+mithril-veil list-presets
+# general_ru      General RU
+# legal_ru        Legal RU
+# ...
+
+mithril-veil anonymize-text --text "Контакт: test@example.local" --mode replace --preset general_ru
 
 mithril-veil anonymize-text \
   --text "Иван Тестович работает в ООО Тестовая Организация." \
   --mode replace \
   --use-ner
+
+# Preset for legal workflows (Natasha NER on by default for this preset):
+mithril-veil anonymize-text \
+  --text "Иван Тестович работает в ООО Тестовая Организация." \
+  --mode replace \
+  --preset legal_ru
+
+# Explicit flags override preset defaults (disable NER despite legal_ru default):
+mithril-veil anonymize-text \
+  --text "Иван Тестович работает в ООО Тестовая Организация." \
+  --mode replace \
+  --preset legal_ru \
+  --no-use-ner
 
 # GLiNER (requires [gliner] extra; probabilistic — review results):
 mithril-veil anonymize-text \
@@ -78,7 +97,12 @@ mithril-veil anonymize-file \
 - Limits: 10 MB max input size; 50 PDF pages max
 - The CLI refuses to overwrite the input file (`--output` must differ from `--input`)
 - Use `--force` to overwrite an existing output or report file
-- JSON reports never contain raw detected values (optional safe `source` metadata only)
+- JSON reports never contain raw detected values (optional safe `source` and `policy` metadata only)
+- **`--preset`** selects a bundled YAML profile; **`list-presets`** lists available ids
+- Available presets: `general_ru`, `legal_ru`, `valuation_ru`, `banking_ru`, `court_case_ru`
+- Explicit `--use-ner`, `--no-use-ner`, `--use-gliner`, `--no-use-gliner`, and GLiNER flags override preset defaults
+- GLiNER remains disabled in all bundled presets unless you enable it explicitly
+- Natasha NER is probabilistic — always review results when enabled
 
 ```bash
 mithril-veil anonymize-file \
@@ -107,10 +131,14 @@ Open http://127.0.0.1:8000/health
 ```bash
 curl -s -X POST http://127.0.0.1:8000/api/v1/anonymize \
   -H "Content-Type: application/json" \
-  -d '{"text":"Иван Тестович: test@example.local, ИНН 7701010017","mode":"replace","use_ner":false}'
+  -d '{"text":"Иван Тестович: test@example.local, ИНН 7701010017","mode":"replace"}'
 
-# Enable optional Natasha NER:
-# -d '{"text":"Иван Тестович работает в ООО Тестовая Организация.","mode":"replace","use_ner":true}'
+# List presets:
+# curl -s http://127.0.0.1:8000/api/v1/presets
+
+# Use a preset (explicit use_ner overrides preset default):
+# -d '{"text":"Иван Тестович работает в ООО Тестовая Организация.","mode":"replace","preset":"legal_ru"}'
+# -d '{"text":"...","mode":"replace","preset":"legal_ru","use_ner":false}'
 ```
 
 Example response shape:

@@ -3,12 +3,26 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from app.core.gliner_config import GLINER_DEFAULT_THRESHOLD, validate_gliner_labels
+from app.core.gliner_config import validate_gliner_labels
 
 
 class AnonymizeMode(StrEnum):
     REPLACE = "replace"
     REDACT = "redact"
+
+
+class PresetDetectorsResponse(BaseModel):
+    regex: bool = True
+    natasha: bool = False
+    gliner: bool = False
+
+
+class PresetInfoResponse(BaseModel):
+    id: str
+    name: str
+    description: str
+    enabled_entities: list[str]
+    detectors: PresetDetectorsResponse
 
 
 class AnonymizeRequest(BaseModel):
@@ -17,23 +31,27 @@ class AnonymizeRequest(BaseModel):
         default=AnonymizeMode.REPLACE,
         description="replace: typed placeholders; redact: [REDACTED]",
     )
-    use_ner: bool = Field(
-        default=False,
-        description="Enable local Natasha NER for PERSON, ORGANIZATION, LOCATION",
+    preset: str | None = Field(
+        default=None,
+        description="Policy preset id (e.g. general_ru, legal_ru)",
     )
-    use_gliner: bool = Field(
-        default=False,
-        description="Enable local GLiNER zero-shot detection",
+    use_ner: bool | None = Field(
+        default=None,
+        description="Enable Natasha NER; null uses preset default or false",
+    )
+    use_gliner: bool | None = Field(
+        default=None,
+        description="Enable GLiNER; null uses preset default or false",
     )
     gliner_labels: list[str] | None = Field(
         default=None,
         description="Optional GLiNER label list (max 50)",
     )
-    gliner_threshold: float = Field(
-        default=GLINER_DEFAULT_THRESHOLD,
+    gliner_threshold: float | None = Field(
+        default=None,
         ge=0.0,
         le=1.0,
-        description="Minimum GLiNER score to keep an entity",
+        description="Minimum GLiNER score; null uses preset default or 0.5",
     )
     gliner_model_name: str | None = Field(
         default=None,

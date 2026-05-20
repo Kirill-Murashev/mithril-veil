@@ -9,7 +9,8 @@ Mithril Veil is a local-first service that detects Russian PII in text and retur
 | **API** | `app/api/` | FastAPI HTTP endpoints |
 | **CLI** | `app/cli/` | `mithril-veil` commands for text, stdin, and files |
 | **Document I/O** | `app/document_io/` | UTF-8 text, DOCX (`python-docx`), text-based PDF (`pypdf`) |
-| **Pipeline** | `app/core/pipeline.py` | Shared detection → merge → anonymize flow |
+| **Presets** | `app/presets/`, `app/core/presets.py` | YAML policy profiles (entity types, detector defaults) |
+| **Pipeline** | `app/core/pipeline.py` | Shared detection → merge → filter → anonymize flow |
 | **Detectors** | `app/detectors/` | Regex/checksum, optional Natasha NER, optional GLiNER |
 | **Security** | `app/security/` | Retention and audit policy hooks |
 
@@ -25,12 +26,23 @@ Input (HTTP body | CLI text | extracted document text)
   2. Optional local Natasha NER when use_ner=true
   3. Optional local GLiNER zero-shot detector when use_gliner=true
   4. merge_entities (priority, length, confidence)
-  5. anonymizer (replace | redact)
-  6. safe response mapping (strip internal text; mask value_preview)
-  7. summary / optional JSON report with safe source metadata
+  5. filter by preset enabled_entities (when a preset is selected)
+  6. anonymizer (replace | redact)
+  7. safe response mapping (strip internal text; mask value_preview)
+  8. summary / optional JSON report with safe source and policy metadata
 ```
 
-Natasha and GLiNER are **disabled by default**. Structured identifiers (INN, SNILS, passport, bank account, cadastral, court case, etc.) keep higher merge priority than NER/GLiNER spans.
+## Policy presets
+
+Presets are **policy/profile configuration**, not new detectors. Each YAML file under `app/presets/` defines:
+
+- `enabled_entities` — which entity types may appear in output
+- `detectors.natasha` / `detectors.gliner` — default `use_ner` / `use_gliner`
+- optional GLiNER label defaults for when GLiNER is enabled explicitly
+
+API and CLI accept `preset` plus optional overrides. Explicit `use_ner`, `use_gliner`, and GLiNER parameters win over preset defaults. With no preset, behavior matches earlier releases (`use_ner=false`, `use_gliner=false`, no entity filtering).
+
+Natasha and GLiNER are **disabled by default** (and in all bundled presets unless overridden). Structured identifiers (INN, SNILS, passport, bank account, cadastral, court case, etc.) keep higher merge priority than NER/GLiNER spans.
 
 GLiNER loads model weights lazily from Hugging Face on first use unless already cached (local inference afterward; no cloud LLM calls).
 

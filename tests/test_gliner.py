@@ -251,7 +251,7 @@ def test_cli_invalid_threshold_exit_code():
 
 def test_run_anonymization_gliner_disabled_by_default():
     set_fake_gliner_model(FakeGlinerModel(_fake_predictions_for_ner_text()))
-    response = run_anonymization(SYNTHETIC_NER_TEXT, AnonymizeMode.REPLACE)
+    response, _policy = run_anonymization(SYNTHETIC_NER_TEXT, AnonymizeMode.REPLACE)
     assert not any(e.detector == "gliner" for e in response.entities)
 
 
@@ -259,7 +259,7 @@ def test_run_anonymization_gliner_disabled_by_default():
 def test_gliner_integration_optional():
     pytest.importorskip("gliner")
     reset_gliner_runtime_for_tests()
-    response = run_anonymization(
+    response, _policy = run_anonymization(
         SYNTHETIC_NER_TEXT,
         AnonymizeMode.REPLACE,
         use_gliner=True,

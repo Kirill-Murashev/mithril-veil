@@ -10,11 +10,10 @@
 - [x] **Slice 4A: DOCX and text-based PDF ingestion** (no OCR)
 - [x] **Slice 4B: optional Natasha NER** (PERSON, ORGANIZATION, LOCATION)
 - [x] **Slice 5: optional GLiNER** zero-shot labels
+- [x] **Slice 6: policy presets** and profile-based entity/detector configuration
 - [x] Synthetic test fixtures only
 
 ## Next
-
-- Preset-driven entity selection
 - OGRN/OGRNIP/BANK_ACCOUNT checksum validation
 - OCR for image-only PDFs (optional, local-only)
 - Formatted DOCX/PDF output (optional)

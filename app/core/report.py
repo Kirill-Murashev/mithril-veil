@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Any
 
 from app import __version__
+from app.core.presets import PolicyMetadata
 from app.core.schemas import AnonymizeMode, AnonymizeResponse
 from app.document_io.base import SourceMetadata, ensure_safe_report_path
 
@@ -12,6 +13,7 @@ def build_anonymization_report(
     mode: AnonymizeMode,
     *,
     source: SourceMetadata | None = None,
+    policy: PolicyMetadata | None = None,
 ) -> dict[str, Any]:
     """Build a safe JSON-serializable report (no raw detected values)."""
     payload: dict[str, Any] = {
@@ -22,6 +24,12 @@ def build_anonymization_report(
         "entities": [entity.model_dump() for entity in response.entities],
         "warnings": list(response.warnings),
     }
+    if policy is not None:
+        payload["policy"] = {
+            "preset": policy.preset,
+            "enabled_entities": list(policy.enabled_entities),
+            "detectors": policy.detectors.model_dump(),
+        }
     if source:
         payload["source"] = {
             key: value
@@ -38,9 +46,10 @@ def write_anonymization_report(
     *,
     force: bool = False,
     source: SourceMetadata | None = None,
+    policy: PolicyMetadata | None = None,
 ) -> None:
     ensure_safe_report_path(report_path, force=force)
-    payload = build_anonymization_report(response, mode, source=source)
+    payload = build_anonymization_report(response, mode, source=source, policy=policy)
     report_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         report_path.write_text(

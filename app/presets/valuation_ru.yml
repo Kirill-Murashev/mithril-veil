@@ -1,17 +1,35 @@
-# Valuation / appraisal reports preset (Russian)
-# TODO: wire presets into pipeline (see docs/TODO.md)
-name: valuation_ru
-description: Valuation and appraisal report sanitization
+id: valuation_ru
+name: Valuation RU
+description: Russian real estate valuation documents and reports.
 enabled_entities:
   - PERSON
   - ORGANIZATION
+  - LOCATION
   - ADDRESS
-  - PHONE
   - EMAIL
+  - PHONE
   - INN
   - SNILS
   - PASSPORT_RU
-  - CADASTRAL_NUMBER
   - CONTRACT_NUMBER
+  - CADASTRAL_NUMBER
   - BANK_ACCOUNT
   - COURT_CASE_NUMBER
+  - URL
+  - TELEGRAM_HANDLE
+detectors:
+  regex: true
+  natasha: true
+  gliner: false
+gliner:
+  labels:
+    - person
+    - organization
+    - address
+    - contract number
+    - court case number
+    - tax identification number
+  threshold: 0.5
+notes:
+  - NER is probabilistic and requires manual review.
+  - Structured identifiers are handled primarily by deterministic recognizers.

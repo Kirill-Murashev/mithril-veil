@@ -17,6 +17,7 @@ from app.core.exceptions import (
     UnsupportedDocumentType,
 )
 from app.core.pipeline import run_anonymization
+from app.core.presets import UnknownPresetError, list_presets, resolve_anonymization_options
 from app.core.report import write_anonymization_report
 from app.core.schemas import AnonymizeMode
 from app.document_io import (
@@ -40,26 +41,39 @@ def _parse_mode(value: str) -> AnonymizeMode:
         ) from exc
 
 
-def _use_ner_from_args(args: argparse.Namespace) -> bool:
-    return bool(getattr(args, "use_ner", False))
+def _optional_bool_from_args(args: argparse.Namespace, name: str) -> bool | None:
+    if not hasattr(args, name):
+        return None
+    value = getattr(args, name)
+    return value if value is not None else None
 
 
 def _anonymization_kwargs(args: argparse.Namespace) -> dict:
     from app.core.gliner_config import validate_gliner_labels
 
-    threshold = float(getattr(args, "gliner_threshold", 0.5))
-    if threshold < 0.0 or threshold > 1.0:
-        raise MithrilVeilError("gliner-threshold must be between 0.0 and 1.0.")
+    preset_id = getattr(args, "preset", None)
+    use_ner = _optional_bool_from_args(args, "use_ner")
+    use_gliner = _optional_bool_from_args(args, "use_gliner")
+
+    threshold_raw = getattr(args, "gliner_threshold", None)
+    threshold: float | None = None
+    if threshold_raw is not None:
+        threshold = float(threshold_raw)
+        if threshold < 0.0 or threshold > 1.0:
+            raise MithrilVeilError("gliner-threshold must be between 0.0 and 1.0.")
+
     labels = getattr(args, "gliner_labels", None) or None
     if labels is not None:
         labels = validate_gliner_labels(labels)
-    return {
-        "use_ner": _use_ner_from_args(args),
-        "use_gliner": bool(getattr(args, "use_gliner", False)),
-        "gliner_labels": labels,
-        "gliner_threshold": threshold,
-        "gliner_model_name": getattr(args, "gliner_model_name", None),
-    }
+
+    return resolve_anonymization_options(
+        preset_id=preset_id,
+        use_ner=use_ner,
+        use_gliner=use_gliner,
+        gliner_labels=labels,
+        gliner_threshold=threshold,
+        gliner_model_name=getattr(args, "gliner_model_name", None),
+    )
 
 
 def _add_common_anonymize_args(parser: argparse.ArgumentParser) -> None:
@@ -70,14 +84,22 @@ def _add_common_anonymize_args(parser: argparse.ArgumentParser) -> None:
         help="Anonymization mode (default: replace)",
     )
     parser.add_argument(
+        "--preset",
+        default=None,
+        metavar="PRESET_ID",
+        help="Policy preset (e.g. general_ru, legal_ru, valuation_ru)",
+    )
+    parser.add_argument(
         "--use-ner",
-        action="store_true",
-        help="Enable local Natasha NER (PERSON, ORGANIZATION, LOCATION)",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Enable/disable local Natasha NER (overrides preset default)",
     )
     parser.add_argument(
         "--use-gliner",
-        action="store_true",
-        help="Enable local GLiNER zero-shot detection (requires [gliner] extra)",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Enable/disable local GLiNER (overrides preset default)",
     )
     parser.add_argument(
         "--gliner-label",
@@ -89,8 +111,8 @@ def _add_common_anonymize_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--gliner-threshold",
         type=float,
-        default=0.5,
-        help="Minimum GLiNER score (0.0–1.0, default: 0.5)",
+        default=None,
+        help="Minimum GLiNER score (0.0–1.0; preset or 0.5 default)",
     )
     parser.add_argument(
         "--gliner-model-name",
@@ -113,12 +135,19 @@ def _cmd_version(_args: argparse.Namespace) -> int:
     return EXIT_SUCCESS
 
 
+def _cmd_list_presets(_args: argparse.Namespace) -> int:
+    for info in list_presets():
+        print(f"{info.id:<16}{info.name}")
+    return EXIT_SUCCESS
+
+
 def _cmd_anonymize_text(args: argparse.Namespace) -> int:
     if not args.text.strip():
         print("Error: --text must not be empty.", file=sys.stderr)
         return EXIT_ERROR
     mode = _parse_mode(args.mode)
-    response = run_anonymization(args.text, mode, **_anonymization_kwargs(args))
+    resolved = _anonymization_kwargs(args)
+    response, _policy = run_anonymization(args.text, mode, _resolved=resolved)
     _print_stderr_summary(response)
     sys.stdout.write(response.text)
     return EXIT_SUCCESS
@@ -134,7 +163,8 @@ def _cmd_anonymize_stdin(args: argparse.Namespace) -> int:
     if not raw.strip():
         print("Error: stdin input is empty.", file=sys.stderr)
         return EXIT_ERROR
-    response = run_anonymization(raw, mode, **_anonymization_kwargs(args))
+    resolved = _anonymization_kwargs(args)
+    response, _policy = run_anonymization(raw, mode, _resolved=resolved)
     _print_stderr_summary(response)
     sys.stdout.write(response.text)
     return EXIT_SUCCESS
@@ -164,7 +194,8 @@ def _cmd_anonymize_file(args: argparse.Namespace) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return EXIT_ERROR
 
-    response = run_anonymization(content, mode, **_anonymization_kwargs(args))
+    resolved = _anonymization_kwargs(args)
+    response, policy = run_anonymization(content, mode, _resolved=resolved)
     try:
         write_text_file(output_path, response.text, force=force)
     except UnsupportedDocumentType as exc:
@@ -174,7 +205,14 @@ def _cmd_anonymize_file(args: argparse.Namespace) -> int:
     if args.report:
         report_path = Path(args.report)
         try:
-            write_anonymization_report(report_path, response, mode, force=force, source=source)
+            write_anonymization_report(
+                report_path,
+                response,
+                mode,
+                force=force,
+                source=source,
+                policy=policy,
+            )
         except UnsafeFileOperation as exc:
             print(f"Error: {exc}", file=sys.stderr)
             return EXIT_UNSAFE
@@ -194,6 +232,7 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     subparsers.add_parser("version", help="Print version and exit")
+    subparsers.add_parser("list-presets", help="List available policy presets")
 
     text_parser = subparsers.add_parser("anonymize-text", help="Anonymize inline text")
     text_parser.add_argument("--text", required=True, help="Input text to anonymize")
@@ -229,6 +268,7 @@ def main(argv: list[str] | None = None) -> int:
 
     handlers = {
         "version": _cmd_version,
+        "list-presets": _cmd_list_presets,
         "anonymize-text": _cmd_anonymize_text,
         "anonymize-stdin": _cmd_anonymize_stdin,
         "anonymize-file": _cmd_anonymize_file,
@@ -236,6 +276,9 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         return handlers[args.command](args)
+    except UnknownPresetError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return EXIT_ERROR
     except InvalidAnonymizationMode as exc:
         print(f"Error: {exc}", file=sys.stderr)
         return EXIT_ERROR

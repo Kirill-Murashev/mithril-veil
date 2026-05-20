@@ -1,0 +1,32 @@
+id: banking_ru
+name: Banking RU
+description: Russian banking and payment-related identifiers.
+enabled_entities:
+  - PERSON
+  - ORGANIZATION
+  - EMAIL
+  - PHONE
+  - INN
+  - SNILS
+  - PASSPORT_RU
+  - OGRN
+  - OGRNIP
+  - KPP
+  - BIK
+  - BANK_ACCOUNT
+  - CORRESPONDENT_ACCOUNT
+  - CARD_NUMBER
+detectors:
+  regex: true
+  natasha: false
+  gliner: false
+gliner:
+  labels:
+    - person
+    - organization
+    - bank account
+    - tax identification number
+  threshold: 0.5
+notes:
+  - Focus on structured financial identifiers; NER disabled by default.
+  - Enable --use-ner explicitly if person/organization spans are needed.

@@ -93,7 +93,7 @@ def test_span_priority_inn_over_organization():
 
 @natasha_required
 def test_summary_includes_natasha_detector():
-    response = run_anonymization(SYNTHETIC_NER_TEXT, AnonymizeMode.REPLACE, use_ner=True)
+    response, _policy = run_anonymization(SYNTHETIC_NER_TEXT, AnonymizeMode.REPLACE, use_ner=True)
     assert response.summary.detectors.get("natasha", 0) >= 1
 
 

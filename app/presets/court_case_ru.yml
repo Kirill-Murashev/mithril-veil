@@ -1,6 +1,6 @@
-id: legal_ru
-name: Legal RU
-description: Russian legal documents, contracts, and court-related text.
+id: court_case_ru
+name: Court Case RU
+description: Russian court case materials and procedural text.
 enabled_entities:
   - PERSON
   - ORGANIZATION
@@ -11,10 +11,9 @@ enabled_entities:
   - INN
   - SNILS
   - PASSPORT_RU
-  - CONTRACT_NUMBER
   - COURT_CASE_NUMBER
+  - CONTRACT_NUMBER
   - URL
-  - TELEGRAM_HANDLE
 detectors:
   regex: true
   natasha: true
@@ -23,10 +22,9 @@ gliner:
   labels:
     - person
     - organization
-    - address
-    - contract number
+    - location
     - court case number
   threshold: 0.5
 notes:
   - Natasha NER is probabilistic; review results manually.
-  - GLiNER remains disabled unless enabled explicitly.
+  - Court and contract numbers rely on deterministic recognizers.
