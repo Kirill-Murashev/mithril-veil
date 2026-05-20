@@ -18,6 +18,7 @@ ENTITY_PRIORITIES: dict[str, int] = {
     "CONTRACT_NUMBER": 72,
     "EMAIL": 70,
     "PHONE": 70,
+    "VEHICLE_REGISTRATION_NUMBER": 70,
     "IP_ADDRESS": 68,
     "URL": 68,
     "TELEGRAM_HANDLE": 68,
@@ -35,7 +36,9 @@ SAFE_METADATA_KEYS: frozenset[str] = frozenset(
         "context_matched",
         "luhn_valid",
         "model",
+        "model_name",
         "source_label",
+        "threshold",
     }
 )
 

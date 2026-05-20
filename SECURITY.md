@@ -25,6 +25,8 @@ Mithril Veil is designed for self-hosted deployment. By default:
 
 Run the service on infrastructure you control. Use TLS and network isolation in production.
 
+Optional GLiNER models may download weights from Hugging Face on first use. Pre-cache models for air-gapped deployments. Inference remains local; no document content is sent to cloud LLM APIs.
+
 ## Cloud agents
 
 Do not grant cloud coding agents or third-party automation access to private documents processed by your instance.

@@ -9,6 +9,7 @@
 - [x] Slice 3: CLI and safe text document ingestion
 - [x] **Slice 4A: DOCX and text-based PDF ingestion** (no OCR)
 - [x] **Slice 4B: optional Natasha NER** (PERSON, ORGANIZATION, LOCATION)
+- [x] **Slice 5: optional GLiNER** zero-shot labels
 - [x] Synthetic test fixtures only
 
 ## Next

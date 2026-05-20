@@ -32,6 +32,9 @@ dev = [
     "ruff>=0.8.0",
     "reportlab>=4.2.0",
 ]
+gliner = [
+    "gliner>=0.2.0",
+]
 
 [project.scripts]
 mithril-veil = "app.cli.main:main"
@@ -47,7 +50,10 @@ include = ["app*"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
-addopts = "-q"
+addopts = "-q -m 'not integration'"
+markers = [
+    "integration: tests that require downloaded ML model weights",
+]
 
 [tool.ruff]
 target-version = "py312"

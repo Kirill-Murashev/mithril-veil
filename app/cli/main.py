@@ -44,6 +44,24 @@ def _use_ner_from_args(args: argparse.Namespace) -> bool:
     return bool(getattr(args, "use_ner", False))
 
 
+def _anonymization_kwargs(args: argparse.Namespace) -> dict:
+    from app.core.gliner_config import validate_gliner_labels
+
+    threshold = float(getattr(args, "gliner_threshold", 0.5))
+    if threshold < 0.0 or threshold > 1.0:
+        raise MithrilVeilError("gliner-threshold must be between 0.0 and 1.0.")
+    labels = getattr(args, "gliner_labels", None) or None
+    if labels is not None:
+        labels = validate_gliner_labels(labels)
+    return {
+        "use_ner": _use_ner_from_args(args),
+        "use_gliner": bool(getattr(args, "use_gliner", False)),
+        "gliner_labels": labels,
+        "gliner_threshold": threshold,
+        "gliner_model_name": getattr(args, "gliner_model_name", None),
+    }
+
+
 def _add_common_anonymize_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument(
         "--mode",
@@ -55,6 +73,29 @@ def _add_common_anonymize_args(parser: argparse.ArgumentParser) -> None:
         "--use-ner",
         action="store_true",
         help="Enable local Natasha NER (PERSON, ORGANIZATION, LOCATION)",
+    )
+    parser.add_argument(
+        "--use-gliner",
+        action="store_true",
+        help="Enable local GLiNER zero-shot detection (requires [gliner] extra)",
+    )
+    parser.add_argument(
+        "--gliner-label",
+        action="append",
+        dest="gliner_labels",
+        metavar="LABEL",
+        help="GLiNER label (repeatable; default labels used if omitted)",
+    )
+    parser.add_argument(
+        "--gliner-threshold",
+        type=float,
+        default=0.5,
+        help="Minimum GLiNER score (0.0–1.0, default: 0.5)",
+    )
+    parser.add_argument(
+        "--gliner-model-name",
+        default=None,
+        help="Hugging Face GLiNER model id (default: urchade/gliner_mediumv2.1)",
     )
 
 
@@ -77,7 +118,7 @@ def _cmd_anonymize_text(args: argparse.Namespace) -> int:
         print("Error: --text must not be empty.", file=sys.stderr)
         return EXIT_ERROR
     mode = _parse_mode(args.mode)
-    response = run_anonymization(args.text, mode, use_ner=_use_ner_from_args(args))
+    response = run_anonymization(args.text, mode, **_anonymization_kwargs(args))
     _print_stderr_summary(response)
     sys.stdout.write(response.text)
     return EXIT_SUCCESS
@@ -93,7 +134,7 @@ def _cmd_anonymize_stdin(args: argparse.Namespace) -> int:
     if not raw.strip():
         print("Error: stdin input is empty.", file=sys.stderr)
         return EXIT_ERROR
-    response = run_anonymization(raw, mode, use_ner=_use_ner_from_args(args))
+    response = run_anonymization(raw, mode, **_anonymization_kwargs(args))
     _print_stderr_summary(response)
     sys.stdout.write(response.text)
     return EXIT_SUCCESS
@@ -123,7 +164,7 @@ def _cmd_anonymize_file(args: argparse.Namespace) -> int:
         print(f"Error: {exc}", file=sys.stderr)
         return EXIT_ERROR
 
-    response = run_anonymization(content, mode, use_ner=_use_ner_from_args(args))
+    response = run_anonymization(content, mode, **_anonymization_kwargs(args))
     try:
         write_text_file(output_path, response.text, force=force)
     except UnsupportedDocumentType as exc:

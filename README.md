@@ -15,6 +15,7 @@ Detect and anonymize sensitive information in Russian text before sending it to 
 - **Document I/O** for `.txt`, `.md`, `.markdown`, **DOCX**, and **text-based PDF** (output is plain text; formatting not preserved)
 - Deterministic regex/checksum detectors: email, phone, INN, SNILS, passport, OGRN/OGRNIP, KPP, BIK, bank/correspondent accounts, cards, cadastral/court/contract numbers, IP, URL, Telegram handles
 - **Optional local Natasha NER** for Russian PERSON, ORGANIZATION, LOCATION (disabled by default; probabilistic — review results)
+- **Optional GLiNER** zero-shot labels (`pip install -e ".[gliner]"`; disabled by default; may download Hugging Face weights on first use)
 - INN/SNILS checksum validation with context-aware weak candidates
 - Priority-based span merging with confidence tie-breaking
 - Detection summary (`entity_counts`, `detectors`) in API and CLI reports
@@ -33,6 +34,9 @@ cd mithril-veil
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -e ".[dev]"
+
+# Optional GLiNER support (local inference; model weights may download on first use):
+# pip install -e ".[dev,gliner]"
 cp .env.example .env   # optional
 ```
 
@@ -50,6 +54,14 @@ mithril-veil anonymize-text \
   --text "Иван Тестович работает в ООО Тестовая Организация." \
   --mode replace \
   --use-ner
+
+# GLiNER (requires [gliner] extra; probabilistic — review results):
+mithril-veil anonymize-text \
+  --text "Иван Тестович работает в ООО Тестовая Организация." \
+  --mode replace \
+  --use-gliner \
+  --gliner-label person \
+  --gliner-label organization
 
 echo "Контакт: test@example.local" | mithril-veil anonymize-stdin --mode replace
 

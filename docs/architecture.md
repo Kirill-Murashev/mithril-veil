@@ -10,7 +10,7 @@ Mithril Veil is a local-first service that detects Russian PII in text and retur
 | **CLI** | `app/cli/` | `mithril-veil` commands for text, stdin, and files |
 | **Document I/O** | `app/document_io/` | UTF-8 text, DOCX (`python-docx`), text-based PDF (`pypdf`) |
 | **Pipeline** | `app/core/pipeline.py` | Shared detection → merge → anonymize flow |
-| **Detectors** | `app/detectors/` | Deterministic regex recognizers (no ML in this slice) |
+| **Detectors** | `app/detectors/` | Regex/checksum, optional Natasha NER, optional GLiNER |
 | **Security** | `app/security/` | Retention and audit policy hooks |
 
 ## No-storage-by-default
@@ -22,14 +22,17 @@ By default the service does not persist original documents or detected values. T
 ```
 Input (HTTP body | CLI text | extracted document text)
   1. Deterministic regex/checksum recognizers (always)
-  2. Optional local Natasha NER (PERSON, ORGANIZATION, LOCATION) when use_ner enabled
-  3. merge_entities (priority, length, confidence)
-  4. anonymizer (replace | redact)
-  5. safe response mapping (strip internal text; mask value_preview)
-  6. summary / optional JSON report with safe source metadata
+  2. Optional local Natasha NER when use_ner=true
+  3. Optional local GLiNER zero-shot detector when use_gliner=true
+  4. merge_entities (priority, length, confidence)
+  5. anonymizer (replace | redact)
+  6. safe response mapping (strip internal text; mask value_preview)
+  7. summary / optional JSON report with safe source metadata
 ```
 
-NER is **disabled by default** (`use_ner=false`). Structured PII (INN, SNILS, passport, bank account, etc.) has higher priority than Natasha spans in the merger.
+Natasha and GLiNER are **disabled by default**. Structured identifiers (INN, SNILS, passport, bank account, cadastral, court case, etc.) keep higher merge priority than NER/GLiNER spans.
+
+GLiNER loads model weights lazily from Hugging Face on first use unless already cached (local inference afterward; no cloud LLM calls).
 
 Internal `DetectedEntity.text` is used only in-process. It must not be logged, printed, or written to reports.
 

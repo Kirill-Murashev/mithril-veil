@@ -3,6 +3,8 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.core.gliner_config import GLINER_DEFAULT_THRESHOLD, validate_gliner_labels
+
 
 class AnonymizeMode(StrEnum):
     REPLACE = "replace"
@@ -19,6 +21,32 @@ class AnonymizeRequest(BaseModel):
         default=False,
         description="Enable local Natasha NER for PERSON, ORGANIZATION, LOCATION",
     )
+    use_gliner: bool = Field(
+        default=False,
+        description="Enable local GLiNER zero-shot detection",
+    )
+    gliner_labels: list[str] | None = Field(
+        default=None,
+        description="Optional GLiNER label list (max 50)",
+    )
+    gliner_threshold: float = Field(
+        default=GLINER_DEFAULT_THRESHOLD,
+        ge=0.0,
+        le=1.0,
+        description="Minimum GLiNER score to keep an entity",
+    )
+    gliner_model_name: str | None = Field(
+        default=None,
+        description="Hugging Face GLiNER model id (default: urchade/gliner_mediumv2.1)",
+    )
+
+    @field_validator("gliner_labels")
+    @classmethod
+    def validate_gliner_labels_field(cls, value: list[str] | None) -> list[str] | None:
+        try:
+            return validate_gliner_labels(value)
+        except ValueError as exc:
+            raise ValueError(str(exc)) from exc
 
 
 class DetectedEntityResponse(BaseModel):
