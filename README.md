@@ -6,7 +6,7 @@
 
 Mithril Veil is an open-source, **local-first** service that detects and anonymizes sensitive information in **Russian-language text and documents** before you send content to cloud LLMs. Run it on your laptop or VPS: preprocessing stays on infrastructure you control, with a public codebase you can audit. It targets lawyers, appraisers, consultants, accountants, and small teams who need self-hosted sanitization instead of uploading raw client material to third-party APIs.
 
-> **Status:** **v0.1.0 release candidate** — feature set for first public alpha is complete; APIs may still evolve before 1.0. See [CHANGELOG.md](CHANGELOG.md) and [docs/release_checklist.md](docs/release_checklist.md).
+> **Status:** **v0.1.0 released** (tag `v0.1.0` at `f379872`, 2026-05-20) — first public alpha; APIs may still evolve before 1.0. See [CHANGELOG.md](CHANGELOG.md). Post-release work is tracked under `[Unreleased]` and [docs/roadmap.md](docs/roadmap.md).
 
 ## Security warnings
 
@@ -194,7 +194,7 @@ Default CI ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)) runs the sam
 
 ## Roadmap
 
-See [docs/roadmap.md](docs/roadmap.md). Post-v0.1.0: restore implementation (if approved), OCR, web UI, and format-preserving output remain **out of scope** unless separately approved and threat-modeled.
+See [docs/roadmap.md](docs/roadmap.md). **v0.1.0 is shipped.** Planned next: optional GitHub Release notes, **v0.1.1** patch/hardening, **v0.2.0** scoped features. Restore, OCR, web UI, API upload/restore, and batch `pseudonymize` remain **out of scope** unless explicitly re-scoped and threat-modeled.
 
 ## License
 

@@ -1,6 +1,8 @@
 # Roadmap
 
-## 0.1.0 (release candidate — current)
+## 0.1.0 (released — 2026-05-20)
+
+Tagged **`v0.1.0`** at commit `f379872` (`f379872fbd2df803bff1ed4b33c04f4f9d6fc01a`). First public alpha.
 
 - [x] Regex detectors for common Russian identifiers
 - [x] Deterministic detection hardening (entity model, priorities, checksums, summary)
@@ -25,19 +27,39 @@
 - [x] **Slice 14: de-anonymization / restore workflow design document only** ([restore_workflow_design.md](restore_workflow_design.md); no implementation)
 - [x] **Slice 15: CARD_NUMBER Luhn validation**
 - [x] **Slice 16: release candidate hygiene** (README, CLI examples doc, release/security checklists)
+- [x] **Release:** annotated git tag `v0.1.0` (no separate GitHub Release page required for tag existence)
 
-## Post-v0.1.0 (not scheduled)
+## v0.1.1 — patch / hardening candidates (not scheduled)
 
-- Tag **v0.1.0** and GitHub release (when maintainers approve)
-- Optional broader card-number recall (13/15/19 ungrouped PAN) — product decision only
-- NER/GLiNER precision tuning and preset-driven label profiles
+Small, backward-compatible improvements; no new major surfaces without explicit approval.
 
-## Later (explicit approval required)
+- [ ] Publish **GitHub Release** notes from `CHANGELOG.md` `[0.1.0]` (maintainer; optional)
+- [ ] NER/GLiNER precision/recall tuning and preset-driven label profiles
+- [ ] Optional broader card-number recall (13/15/19 ungrouped PAN) — product decision only
+- [ ] CI workflow maintenance (e.g. GitHub Actions Node 24 migration when upgrading actions)
+- [ ] Documentation and operator-guide polish from production feedback
+- [ ] Dependency patch bumps with full `make check` / default CI (no GLiNER in default CI)
 
-- **De-anonymization / restore implementation** — only after threat model update and approval ([restore_workflow_design.md](restore_workflow_design.md) is design-only today)
-- **OCR** for image-only PDFs (optional, local-only; out of current security model)
-- **Web UI** (not implemented)
-- **Format-preserving** DOCX/PDF/RTF/ODT output (not implemented)
-- HTTP document upload with strict no-persistence defaults
-- Audit log without PII
-- Helm chart and hardened production guide
+## v0.2.0 — feature candidates (explicit approval required)
+
+Larger scope; each item needs threat-model review and a dedicated slice plan.
+
+- [ ] HTTP document upload pipeline with strict no-persistence defaults
+- [ ] Audit log without PII
+- [ ] Helm chart and hardened production deployment guide
+- [ ] Custom preset paths from disk (if ever supported)
+- [ ] Dedicated `ADDRESS` / `DATE_OF_BIRTH` regex detectors (backlog)
+
+## Design-only / later (no implementation without maintainer re-scope)
+
+- **De-anonymization / restore implementation** — [restore_workflow_design.md](restore_workflow_design.md) only; CLI-first future design; **not in 0.1.x**
+- **OCR** for image-only PDFs (optional, local-only)
+- **Web UI**
+- **Format-preserving** DOCX/PDF/RTF/ODT output
+- **API restore** endpoint
+- **Batch `pseudonymize` / batch mapping**
+- Server-side mapping persistence
+- BIK Central Bank directory validation; card network classification
+- Formal privacy guarantees (k-anonymity, differential privacy)
+
+**Invariants for all future work:** no real PII/documents/mappings/passphrases in repo; `value_preview` always `***`; mapping CLI-only and encrypted; GLiNER optional; default CI must not download model weights.
