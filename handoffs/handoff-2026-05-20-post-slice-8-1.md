@@ -9,7 +9,7 @@
 | **License** | Apache License 2.0 |
 | **Version** | 0.1.0 |
 | **Branch** | `main` |
-| **Latest confirmed commit** | `5a5b1fd` — Harden encrypted pseudonymization mapping |
+| **Latest confirmed commit** | `56b7538` — Add threat model documentation |
 
 **What it is:** An open-source, self-hosted Russian PII anonymization/sanitization service for safer LLM workflows. Local-first preprocessing: detect and anonymize sensitive data in Russian text and documents **before** content is sent to cloud LLMs.
 
@@ -25,7 +25,7 @@ Verified at handoff time (local `main`, synced with `origin/main`):
 
 | Item | Status |
 |------|--------|
-| **HEAD / origin/main** | `5a5b1fd80202411e74bed51f3ae0934d94e32f` |
+| **HEAD / origin/main** | `56b75386619c2beb23513be41160f5fc77c7d8c5` |
 | **Version** | `0.1.0` (`app/__init__.py`, `pyproject.toml`) |
 | **Tests** | **158 passed**, 1 deselected (`pytest -m 'not integration'`) |
 | **ruff check** | Passed |
@@ -37,11 +37,12 @@ Verified at handoff time (local `main`, synced with `origin/main`):
 **Recent commit chain:**
 
 ```text
+56b7538 Add threat model documentation
+e973d5a Add post-slice 8.1 project handoff
 5a5b1fd Harden encrypted pseudonymization mapping
 9e4e38b Add encrypted reversible pseudonymization mapping
 c70d23a Add pseudonymize mode and encrypted local mapping
 7d58a65 Add CI and release hygiene
-37fa090 Add policy presets and profile-based filtering
 ```
 
 ---
@@ -60,6 +61,7 @@ c70d23a Add pseudonymize mode and encrypted local mapping
 | **7 — CI / release** | `7d58a65` | GitHub Actions, Makefile, CHANGELOG, release/security checklists |
 | **8 — Reversible mapping** | `c70d23a`, `9e4e38b` | `pseudonymize` mode, encrypted CLI mapping (`.json.enc`), `cryptography` dependency |
 | **8.1 — Hardening** | `5a5b1fd` | Removed unused `mapping_io.py`, path-distinct checks, security regression tests |
+| **9 — Threat model docs** | `56b7538` | `docs/threat_model.md`, security checklist, doc cross-links (no code changes) |
 
 ---
 
@@ -280,13 +282,9 @@ These rules are **non-negotiable** for all future slices:
 
 Small, reviewable slices — **no broad rewrites**.
 
-### A. Slice 9 — Threat model and security regression documentation (recommended next)
+### A. Slice 9 — Threat model and security regression documentation — **done** (`56b7538`)
 
-- Expand `docs/threat_model.md` for encrypted mapping, passphrase handling, local artifact risks, API vs CLI boundaries, no raw logs, no telemetry
-- Add security checklist section for reversible mapping in `docs/security_checklist.md`
-- **No product behavior changes**
-
-### B. Slice 10 — Batch directory processing (CLI)
+### B. Slice 10 — Batch directory processing (CLI) (recommended next)
 
 - Process a directory of supported documents → sanitized text outputs per file
 - Safe per-file reports + aggregate safe summary (no raw values in aggregate)
@@ -302,7 +300,7 @@ Small, reviewable slices — **no broad rewrites**.
 - Design restore workflow **without** implementation
 - Cover risks: mapping possession, passphrase handling, accidental re-identification, audit logging
 
-**Architectural note:** Do **not** implement restore/de-anonymize or web UI until threat model and mapping operational guidance are documented (Slice 9).
+**Architectural note:** Do **not** implement restore/de-anonymize or web UI until de-anonymization design (Slice 12) is written and reviewed.
 
 ---
 
@@ -344,12 +342,12 @@ Repository: https://github.com/Kirill-Murashev/mithril-veil
 
 Before any implementation:
 1. Read the latest handoff: handoffs/handoff-2026-05-20-post-slice-8-1.md
-2. Verify GitHub main if needed (expected HEAD: 5a5b1fd or later)
+2. Verify GitHub main if needed (expected HEAD: 56b7538 or later)
 3. Confirm hard security invariants (no real PII, no raw values in API/reports/logs, mapping CLI-only and encrypted)
 
-Current baseline: version 0.1.0, modes replace/redact/pseudonymize, 158 tests (1 deselected), canonical mapping in app/core/mapping.py + app/security/encrypted_mapping.py.
+Current baseline: version 0.1.0, modes replace/redact/pseudonymize, 158 tests (1 deselected), canonical mapping in app/core/mapping.py + app/security/encrypted_mapping.py, threat model in docs/threat_model.md.
 
-Recommended next slice: Slice 9 — threat model and security regression documentation (docs only, no behavior change).
+Recommended next slice: Slice 10 — batch directory CLI (or Slice 12 design-only for de-anonymization).
 
 Your task: write the next Cursor Composer prompt for exactly ONE small slice. Do not request web UI, de-anonymization implementation, or architecture rewrites unless the user explicitly overrides. Include quality gates, synthetic-data-only rules, and a final report template.
 ```
@@ -360,7 +358,7 @@ Your task: write the next Cursor Composer prompt for exactly ONE small slice. Do
 
 | File | Status |
 |------|--------|
-| `handoffs/handoff-2026-05-20.md` | **Superseded** — untracked draft ending at commit `7d58a65`; predates Slices 8/8.1. Left untracked intentionally; do not commit alongside this file. |
+| `handoffs/handoff-2026-05-20.md` | **Superseded archive** — ends at `7d58a65`; kept for history |
 | `handoffs/handoff-2026-05-20-post-slice-8-1.md` | **Current** — this document |
 
 ---
@@ -369,7 +367,7 @@ Your task: write the next Cursor Composer prompt for exactly ONE small slice. Do
 
 Create a new handoff after:
 
-- Slice 9 (threat model docs) or the next product slice ships;
+- Slice 10+ product slice ships or threat model changes materially;
 - Web UI or OCR work begins;
 - De-anonymization is implemented or seriously designed;
 - Security model or mapping format changes materially;
