@@ -3,17 +3,33 @@ from app.detectors.regex_detectors import (
     BikDetector,
     CadastralNumberDetector,
     ContractNumberDetector,
+    CorrespondentAccountDetector,
     CourtCaseNumberDetector,
     EmailDetector,
     InnDetector,
     KppDetector,
     OgrnDetector,
+    OgrnipDetector,
     PhoneDetector,
     SnilsDetector,
     TelegramHandleDetector,
     UrlDetector,
 )
-from tests.conftest import INVALID_INN_12, SYNTHETIC_INN_10, SYNTHETIC_INN_12, SYNTHETIC_SNILS
+from tests.conftest import (
+    INVALID_BANK_ACCOUNT,
+    INVALID_CORRESPONDENT_ACCOUNT,
+    INVALID_INN_12,
+    INVALID_OGRN,
+    INVALID_OGRNIP,
+    SYNTHETIC_BANK_ACCOUNT,
+    SYNTHETIC_BIK,
+    SYNTHETIC_CORRESPONDENT_ACCOUNT,
+    SYNTHETIC_INN_10,
+    SYNTHETIC_INN_12,
+    SYNTHETIC_OGRN,
+    SYNTHETIC_OGRNIP,
+    SYNTHETIC_SNILS,
+)
 
 
 def test_email_detector_finds_synthetic_email():
@@ -74,11 +90,32 @@ def test_snils_detector_invalid_with_context():
     assert spans[0].metadata.get("checksum_valid") is False
 
 
-def test_ogrn_detector():
-    text = "ОГРН 1027700132193 зарегистрирован."  # synthetic length, TODO checksum
+def test_ogrn_detector_valid_synthetic():
+    text = f"ОГРН {SYNTHETIC_OGRN} зарегистрирован."
     spans = OgrnDetector().detect(text)
     assert len(spans) == 1
     assert spans[0].type == "OGRN"
+    assert spans[0].metadata.get("checksum_valid") is True
+
+
+def test_ogrn_detector_invalid_not_emitted():
+    text = f"ОГРН {INVALID_OGRN} зарегистрирован."
+    spans = OgrnDetector().detect(text)
+    assert spans == []
+
+
+def test_ogrnip_detector_valid_synthetic():
+    text = f"ОГРНИП {SYNTHETIC_OGRNIP} указан."
+    spans = OgrnipDetector().detect(text)
+    assert len(spans) == 1
+    assert spans[0].type == "OGRNIP"
+    assert spans[0].metadata.get("checksum_valid") is True
+
+
+def test_ogrnip_detector_invalid_not_emitted():
+    text = f"ОГРНИП {INVALID_OGRNIP} указан."
+    spans = OgrnipDetector().detect(text)
+    assert spans == []
 
 
 def test_kpp_detector_with_context():
@@ -95,11 +132,46 @@ def test_bik_detector():
     assert spans[0].type == "BIK"
 
 
-def test_bank_account_detector_with_context():
-    text = "р/с 40802810400000123456 в банке."  # synthetic 20-digit account
+def test_bank_account_detector_with_context_no_bik():
+    text = f"р/с {SYNTHETIC_BANK_ACCOUNT} в банке."
     spans = BankAccountDetector().detect(text)
     assert len(spans) == 1
     assert spans[0].type == "BANK_ACCOUNT"
+    assert spans[0].metadata.get("context_matched") is True
+    assert spans[0].metadata.get("checksum_valid") is None
+
+
+def test_bank_account_detector_with_bik_valid_checksum():
+    text = f"БИК {SYNTHETIC_BIK}, р/с {SYNTHETIC_BANK_ACCOUNT}."
+    spans = BankAccountDetector().detect(text)
+    assert len(spans) == 1
+    assert spans[0].metadata.get("checksum_valid") is True
+
+
+def test_bank_account_detector_with_bik_invalid_not_emitted():
+    text = f"БИК {SYNTHETIC_BIK}, р/с {INVALID_BANK_ACCOUNT}."
+    spans = BankAccountDetector().detect(text)
+    assert spans == []
+
+
+def test_correspondent_account_detector_without_bik_still_emitted():
+    text = f"к/с {SYNTHETIC_CORRESPONDENT_ACCOUNT}."
+    spans = CorrespondentAccountDetector().detect(text)
+    assert len(spans) == 1
+    assert spans[0].metadata.get("checksum_valid") is None
+
+
+def test_correspondent_account_detector_with_bik_valid_checksum():
+    text = f"БИК {SYNTHETIC_BIK}, к/с {SYNTHETIC_CORRESPONDENT_ACCOUNT}."
+    spans = CorrespondentAccountDetector().detect(text)
+    assert len(spans) == 1
+    assert spans[0].metadata.get("checksum_valid") is True
+
+
+def test_correspondent_account_detector_with_bik_invalid_not_emitted():
+    text = f"БИК {SYNTHETIC_BIK}, к/с {INVALID_CORRESPONDENT_ACCOUNT}."
+    spans = CorrespondentAccountDetector().detect(text)
+    assert spans == []
 
 
 def test_cadastral_number_detector():

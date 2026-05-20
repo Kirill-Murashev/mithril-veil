@@ -5,12 +5,12 @@
 | PASSPORT_RU | Internal passport series/number | regex, gliner (optional) | regex TODO ranges |
 | SNILS | Social insurance number | regex | checksum |
 | INN | Tax ID (10/12 digits) | regex, gliner (optional) | checksum |
-| OGRN | Legal entity registration (13 digits) | regex | TODO checksum |
-| OGRNIP | Individual entrepreneur OGRN (15 digits) | regex | TODO checksum |
+| OGRN | Legal entity registration (13 digits) | regex | checksum |
+| OGRNIP | Individual entrepreneur OGRN (15 digits) | regex | checksum |
 | KPP | Tax registration reason code (9 digits) | regex + context | TODO |
 | BIK | Bank identification code | regex | TODO directory |
-| BANK_ACCOUNT | Settlement account (20 digits) | regex, gliner (optional) | regex + context |
-| CORRESPONDENT_ACCOUNT | Correspondent account (301…) | regex | TODO checksum |
+| BANK_ACCOUNT | Settlement account (20 digits) | regex, gliner (optional) | context; checksum when BIK nearby |
+| CORRESPONDENT_ACCOUNT | Correspondent account (301…) | regex | checksum when BIK nearby |
 | CARD_NUMBER | Payment card number | regex | TODO Luhn |
 | CADASTRAL_NUMBER | Cadastral parcel ID | regex | — |
 | COURT_CASE_NUMBER | Court case identifier | regex, gliner (optional) | regex TODO formats |
@@ -39,8 +39,11 @@ Bundled presets (`general_ru`, `legal_ru`, `valuation_ru`, `banking_ru`, `court_
 - May miss entities or over-redact harmless text.
 - Structured identifiers (INN, SNILS, passport, bank account, etc.) keep higher merge priority.
 
-## Checksum behavior (INN / SNILS)
+## Checksum behavior (INN / SNILS / OGRN / OGRNIP / bank accounts)
 
 - Valid checksum → emitted with `confidence` ≈ 0.95, `metadata.checksum_valid: true`
 - Invalid checksum without context keyword → not emitted
 - Invalid checksum with context (`ИНН`, `СНИЛС`, etc.) → emitted with lower confidence and `checksum_valid: false`
+- **OGRN / OGRNIP** — invalid checksum → not emitted (no weak-context fallback)
+- **BANK_ACCOUNT** — with account keyword context: validated and rejected when a nearby BIK fails checksum; without nearby BIK, context-only detection is unchanged
+- **CORRESPONDENT_ACCOUNT** — validated and rejected when a nearby BIK fails checksum; without nearby BIK, regex match is still emitted

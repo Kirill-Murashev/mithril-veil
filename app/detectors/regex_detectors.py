@@ -8,9 +8,14 @@ from app.core.entities import (
 )
 from app.detectors.base import BaseDetector
 from app.detectors.validators import (
+    find_nearby_bik,
     has_keyword_context,
     normalize_digits,
+    validate_bank_account,
+    validate_correspondent_account,
     validate_inn,
+    validate_ogrn,
+    validate_ogrnip,
     validate_snils,
 )
 
@@ -149,8 +154,21 @@ class OgrnDetector(BaseDetector):
     _pattern = re.compile(r"\b\d{13}\b")
 
     def detect(self, text: str) -> list[DetectedEntity]:
-        # TODO: OGRN checksum validation
-        return _entities_from_matches(self.entity_type, text, self._pattern, confidence=0.8)
+        entities: list[DetectedEntity] = []
+        for m in self._pattern.finditer(text):
+            raw = m.group()
+            if validate_ogrn(raw):
+                entities.append(
+                    DetectedEntity.create(
+                        self.entity_type,
+                        m.start(),
+                        m.end(),
+                        raw,
+                        confidence=CONFIDENCE_VALIDATED,
+                        metadata={"checksum_valid": True},
+                    )
+                )
+        return entities
 
 
 class OgrnipDetector(BaseDetector):
@@ -158,8 +176,21 @@ class OgrnipDetector(BaseDetector):
     _pattern = re.compile(r"\b\d{15}\b")
 
     def detect(self, text: str) -> list[DetectedEntity]:
-        # TODO: OGRNIP checksum validation
-        return _entities_from_matches(self.entity_type, text, self._pattern, confidence=0.8)
+        entities: list[DetectedEntity] = []
+        for m in self._pattern.finditer(text):
+            raw = m.group()
+            if validate_ogrnip(raw):
+                entities.append(
+                    DetectedEntity.create(
+                        self.entity_type,
+                        m.start(),
+                        m.end(),
+                        raw,
+                        confidence=CONFIDENCE_VALIDATED,
+                        metadata={"checksum_valid": True},
+                    )
+                )
+        return entities
 
 
 class KppDetector(BaseDetector):
@@ -199,17 +230,34 @@ class BankAccountDetector(BaseDetector):
     def detect(self, text: str) -> list[DetectedEntity]:
         entities: list[DetectedEntity] = []
         for m in self._pattern.finditer(text):
-            if has_keyword_context(
+            if not has_keyword_context(
                 text,
                 m.start(),
                 ("р/с", "рс", "расчетный", "расчётный", "счет", "счёт", "account"),
             ):
+                continue
+            raw = m.group()
+            bik = find_nearby_bik(text, m.start())
+            if bik is not None:
+                if not validate_bank_account(raw, bik):
+                    continue
                 entities.append(
                     DetectedEntity.create(
                         self.entity_type,
                         m.start(),
                         m.end(),
-                        m.group(),
+                        raw,
+                        confidence=CONFIDENCE_VALIDATED,
+                        metadata={"checksum_valid": True, "context_matched": True},
+                    )
+                )
+            else:
+                entities.append(
+                    DetectedEntity.create(
+                        self.entity_type,
+                        m.start(),
+                        m.end(),
+                        raw,
                         confidence=0.88,
                         metadata={"context_matched": True},
                     )
@@ -222,8 +270,34 @@ class CorrespondentAccountDetector(BaseDetector):
     _pattern = re.compile(r"\b301\d{17}\b")
 
     def detect(self, text: str) -> list[DetectedEntity]:
-        # TODO: correspondent account checksum with BIK
-        return _entities_from_matches(self.entity_type, text, self._pattern)
+        entities: list[DetectedEntity] = []
+        for m in self._pattern.finditer(text):
+            raw = m.group()
+            bik = find_nearby_bik(text, m.start())
+            if bik is not None:
+                if not validate_correspondent_account(raw, bik):
+                    continue
+                entities.append(
+                    DetectedEntity.create(
+                        self.entity_type,
+                        m.start(),
+                        m.end(),
+                        raw,
+                        confidence=CONFIDENCE_VALIDATED,
+                        metadata={"checksum_valid": True},
+                    )
+                )
+            else:
+                entities.append(
+                    DetectedEntity.create(
+                        self.entity_type,
+                        m.start(),
+                        m.end(),
+                        raw,
+                        confidence=CONFIDENCE_DEFAULT,
+                    )
+                )
+        return entities
 
 
 class CardNumberDetector(BaseDetector):

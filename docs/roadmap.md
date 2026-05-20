@@ -21,9 +21,9 @@
 - [x] **Slice 12: ODT text ingestion** (ZIP `content.xml`, stdlib XML; no embedded objects/OCR)
 - [x] **Slice 12.1: ODT ingestion hardening** (zip-bomb checks, malformed XML, embedded object ignoring, batch safety)
 - [x] Synthetic test fixtures only
+- [x] **Slice 13: deterministic identifier hardening** (OGRN/OGRNIP checksums; bank/correspondent account checksums when BIK is nearby)
 
 ## Next
-- OGRN/OGRNIP/BANK_ACCOUNT checksum validation (detection hardening)
 - De-anonymization **design document only** (no product implementation yet)
 
 ## Later
