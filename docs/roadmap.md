@@ -19,11 +19,10 @@
 - [x] **Slice 11: RTF text ingestion** (plain text via `striprtf`; no embedded objects/OCR)
 - [x] **Slice 11.1: RTF ingestion hardening** (encoding, malformed RTF, binary artifact filter)
 - [x] **Slice 12: ODT text ingestion** (ZIP `content.xml`, stdlib XML; no embedded objects/OCR)
+- [x] **Slice 12.1: ODT ingestion hardening** (zip-bomb checks, malformed XML, embedded object ignoring, batch safety)
 - [x] Synthetic test fixtures only
 
 ## Next
-
-- **Slice 12.1: ODT ingestion hardening** (zip-bomb checks, malformed XML, embedded object ignoring, batch safety)
 - OGRN/OGRNIP/BANK_ACCOUNT checksum validation (detection hardening)
 - De-anonymization **design document only** (no product implementation yet)
 

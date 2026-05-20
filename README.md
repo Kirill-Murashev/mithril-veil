@@ -103,7 +103,7 @@ mithril-veil anonymize-dir ./documents --output-dir ./sanitized \
 - Supported **input**: `.txt`, `.md`, `.markdown`, `.docx`, `.odt` (plain text from ZIP `content.xml`; stdlib XML; no embedded objects), `.rtf` (best-effort plain text via `striprtf`; UTF-8/cp1251; no embedded objects), `.pdf` (text-based only)
 - Supported **output**: `.txt`, `.md`, `.markdown` (sanitized plain text)
 - **Not supported**: OCR, image-only PDFs, encrypted PDFs, format-preserving DOCX/PDF/RTF/ODT output, embedded RTF/ODT objects/images
-- Limits: 10 MB max input size; 50 PDF pages max
+- Limits: 10 MB max input size; 50 PDF pages max; ODT `content.xml` uncompressed cap 8 MB (compression-ratio guard)
 - The CLI refuses to overwrite the input file (`--output` must differ from `--input`)
 - Use `--force` to overwrite an existing output or report file
 - JSON reports never contain raw detected values (optional safe `source` and `policy` metadata only)

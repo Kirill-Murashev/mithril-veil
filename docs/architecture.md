@@ -55,13 +55,13 @@ Internal `DetectedEntity.text` is used only in-process. It must not be logged, p
 |--------|--------|-------|
 | `.txt`, `.md` | UTF-8 | Direct read |
 | `.docx` | `python-docx` | Paragraphs + table cells → plain text |
-| `.odt` | `zipfile` + stdlib XML | `content.xml` only; paragraphs/headings/tables → plain text; no objects/images; errors never echo file content |
+| `.odt` | `zipfile` + stdlib XML | `content.xml` only; ZipInfo size/ratio checks (8 MB cap, 100:1 max ratio); paragraphs/headings/tables → plain text; draw/image/object subtrees skipped; errors never echo file content |
 | `.pdf` | `pypdf` | Text extraction only; no OCR |
 | `.rtf` | `striprtf` | Best-effort plain text; UTF-8 then cp1251/latin-1; `\\bin` hex stripped; no objects/images; errors never echo file content |
 | Encrypted PDF | — | Rejected |
 | Image-only PDF | — | Rejected (no extractable text) |
 
-Limits: `MAX_INPUT_FILE_BYTES` (10 MB), `MAX_PDF_PAGES` (50).
+Limits: `MAX_INPUT_FILE_BYTES` (10 MB), `MAX_PDF_PAGES` (50), ODT `content.xml` uncompressed cap 8 MB (see `app/document_io/odt.py`).
 
 DOCX/PDF input produces **text output** only; layout is not preserved.
 
