@@ -167,8 +167,9 @@ Required if application code, dependencies, CI workflows, or security-sensitive 
 |------|--------|
 | CHANGELOG finalization commit | `457a5e3` — Finalize CHANGELOG for v0.1.0 pre-tag release |
 | `CHANGELOG.md` | `[Unreleased]` empty; all RC entries under `[0.1.0] - 2026-05-20` |
-| `HEAD` / `origin/main` | Both **`457a5e3`** after push |
-| CI on CHANGELOG commit | **Success** — run [26186839511](https://github.com/Kirill-Murashev/mithril-veil/actions/runs/26186839511), `head_sha` `457a5e355b1f8955265a172789fc718f46883a63` (short: `457a5e3`), job `test (3.12)` ~28s |
+| `HEAD` / `origin/main` | **`56ca3f6`** (decision-note update after CHANGELOG); CHANGELOG push at **`457a5e3`** |
+| CI on CHANGELOG commit (`457a5e3`) | **Success** — run [26186839511](https://github.com/Kirill-Murashev/mithril-veil/actions/runs/26186839511), job `test (3.12)` ~39s |
+| CI on current tip (`56ca3f6`) | **Success** — run [26186907884](https://github.com/Kirill-Murashev/mithril-veil/actions/runs/26186907884), job `test (3.12)` ~42s |
 | `v0.1.0` tag (local / remote) | **Still absent** |
 | GitHub release | **Not created** |
 
