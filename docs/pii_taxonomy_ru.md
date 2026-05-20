@@ -11,7 +11,7 @@
 | BIK | Bank identification code | regex | TODO directory |
 | BANK_ACCOUNT | Settlement account (20 digits) | regex, gliner (optional) | context; checksum when BIK nearby |
 | CORRESPONDENT_ACCOUNT | Correspondent account (301…) | regex | checksum when BIK nearby |
-| CARD_NUMBER | Payment card number | regex | TODO Luhn |
+| CARD_NUMBER | Payment card number | regex | Luhn |
 | CADASTRAL_NUMBER | Cadastral parcel ID | regex | — |
 | COURT_CASE_NUMBER | Court case identifier | regex, gliner (optional) | regex TODO formats |
 | CONTRACT_NUMBER | Contract reference | regex, gliner (optional) | regex + keywords |
@@ -39,7 +39,7 @@ Bundled presets (`general_ru`, `legal_ru`, `valuation_ru`, `banking_ru`, `court_
 - May miss entities or over-redact harmless text.
 - Structured identifiers (INN, SNILS, passport, bank account, etc.) keep higher merge priority.
 
-## Checksum behavior (INN / SNILS / OGRN / OGRNIP / bank accounts)
+## Checksum behavior (INN / SNILS / OGRN / OGRNIP / bank accounts / cards)
 
 - Valid checksum → emitted with `confidence` ≈ 0.95, `metadata.checksum_valid: true`
 - Invalid checksum without context keyword → not emitted
@@ -47,3 +47,4 @@ Bundled presets (`general_ru`, `legal_ru`, `valuation_ru`, `banking_ru`, `court_
 - **OGRN / OGRNIP** — invalid checksum → not emitted (no weak-context fallback)
 - **BANK_ACCOUNT** — with account keyword context: validated and rejected when a nearby BIK fails checksum; without nearby BIK, context-only detection is unchanged
 - **CORRESPONDENT_ACCOUNT** — validated and rejected when a nearby BIK fails checksum; without nearby BIK, regex match is still emitted
+- **CARD_NUMBER** — invalid Luhn or all-identical digits → not emitted; valid Luhn → `checksum_valid: true`

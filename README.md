@@ -21,7 +21,7 @@ Detect and anonymize sensitive information in Russian text before sending it to 
 - **Optional local Natasha NER** for Russian PERSON, ORGANIZATION, LOCATION (disabled by default; probabilistic — review results)
 - **Optional GLiNER** zero-shot labels (`pip install -e ".[gliner]"`; disabled by default; may download Hugging Face weights on first use)
 - **Policy presets** (`general_ru`, `legal_ru`, `valuation_ru`, `banking_ru`, `court_case_ru`) for workflow-specific entity and detector profiles
-- INN/SNILS/OGRN/OGRNIP checksum validation; bank/correspondent account checksums when BIK is nearby
+- INN/SNILS/OGRN/OGRNIP checksum validation; bank/correspondent account checksums when BIK is nearby; CARD_NUMBER Luhn validation
 - Priority-based span merging with confidence tie-breaking
 - Detection summary (`entity_counts`, `detectors`) in API and CLI reports
 - Modes: `replace` (typed placeholders), `redact`, and `pseudonymize` (reversible placeholders; optional encrypted CLI-only mapping — not irreversible anonymization)

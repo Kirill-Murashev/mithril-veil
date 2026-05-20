@@ -45,7 +45,7 @@ API and CLI accept `preset` plus optional overrides. Explicit `use_ner`, `use_gl
 
 Natasha and GLiNER are **disabled by default** (and in all bundled presets unless overridden). Structured identifiers (INN, SNILS, passport, bank account, cadastral, court case, etc.) keep higher merge priority than NER/GLiNER spans.
 
-Deterministic checksum validation (Slice 13): **OGRN** and **OGRNIP** require valid control digits; **BANK_ACCOUNT** and **CORRESPONDENT_ACCOUNT** use Central Bank weighted checksums when a **BIK** appears in the same local text window (~120 characters), otherwise bank accounts still require settlement-account keywords and correspondent accounts remain regex-detected without BIK linkage.
+Deterministic checksum validation: **OGRN** and **OGRNIP** require valid control digits; **BANK_ACCOUNT** and **CORRESPONDENT_ACCOUNT** use Central Bank weighted checksums when a **BIK** appears in the same local text window (~120 characters), otherwise bank accounts still require settlement-account keywords and correspondent accounts remain regex-detected without BIK linkage; **CARD_NUMBER** requires Luhn-valid 13–19 digit candidates (all-identical digit strings rejected).
 
 GLiNER loads model weights lazily from Hugging Face on first use unless already cached (local inference afterward; no cloud LLM calls).
 

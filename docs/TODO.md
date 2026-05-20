@@ -3,7 +3,7 @@
 - [x] Slice 7: CI and release hygiene (workflows, `make check`, CHANGELOG, release/security docs)
 - [x] Wire YAML presets (`app/presets/*.yml`) into the detection pipeline
 - [x] OGRN/OGRNIP/BANK_ACCOUNT checksum validation with BIK linkage (Slice 13)
-- Luhn validation for CARD_NUMBER
+- [x] Luhn validation for CARD_NUMBER (Slice 15)
 - Improve NER/GLiNER precision/recall tuning and preset-driven label profiles
 - OCR for image-only PDFs (not in scope for 4A)
 - Formatted DOCX/PDF output (preserve layout)

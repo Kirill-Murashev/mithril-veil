@@ -125,6 +125,46 @@ def validate_correspondent_account(account: str, bik: str) -> bool:
     return _bank_control_sum("0" + bik_digits[4:6] + account_digits)
 
 
+_CARD_MIN_DIGITS = 13
+_CARD_MAX_DIGITS = 19
+
+
+def validate_luhn(digits: str) -> bool:
+    """
+    Validate a digit string with the standard Luhn (mod 10) checksum.
+
+    Expects ``digits`` to contain only ASCII digits (callers usually pass
+    ``normalize_digits(value)`` first).
+    """
+    if len(digits) < 2 or not digits.isdigit():
+        return False
+    total = 0
+    for index, char in enumerate(reversed(digits)):
+        value = int(char)
+        if index % 2 == 1:
+            value *= 2
+            if value > 9:
+                value -= 9
+        total += value
+    return total % 10 == 0
+
+
+def validate_card_number(value: str) -> bool:
+    """
+    Validate a payment card number candidate (Luhn + length + trivial rejects).
+
+    Accepts common grouping with spaces or hyphens; rejects all-identical digits.
+    """
+    digits = normalize_digits(value)
+    if not digits.isdigit():
+        return False
+    if len(digits) < _CARD_MIN_DIGITS or len(digits) > _CARD_MAX_DIGITS:
+        return False
+    if len(set(digits)) == 1:
+        return False
+    return validate_luhn(digits)
+
+
 def find_nearby_bik(text: str, position: int, window: int = 120) -> str | None:
     """Return the BIK match closest to ``position`` within a local text window."""
     start = max(0, position - window)

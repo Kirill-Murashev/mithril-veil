@@ -2,6 +2,7 @@ from app.detectors.regex_detectors import (
     BankAccountDetector,
     BikDetector,
     CadastralNumberDetector,
+    CardNumberDetector,
     ContractNumberDetector,
     CorrespondentAccountDetector,
     CourtCaseNumberDetector,
@@ -17,12 +18,14 @@ from app.detectors.regex_detectors import (
 )
 from tests.conftest import (
     INVALID_BANK_ACCOUNT,
+    INVALID_CARD_VISA,
     INVALID_CORRESPONDENT_ACCOUNT,
     INVALID_INN_12,
     INVALID_OGRN,
     INVALID_OGRNIP,
     SYNTHETIC_BANK_ACCOUNT,
     SYNTHETIC_BIK,
+    SYNTHETIC_CARD_VISA,
     SYNTHETIC_CORRESPONDENT_ACCOUNT,
     SYNTHETIC_INN_10,
     SYNTHETIC_INN_12,
@@ -171,6 +174,21 @@ def test_correspondent_account_detector_with_bik_valid_checksum():
 def test_correspondent_account_detector_with_bik_invalid_not_emitted():
     text = f"БИК {SYNTHETIC_BIK}, к/с {INVALID_CORRESPONDENT_ACCOUNT}."
     spans = CorrespondentAccountDetector().detect(text)
+    assert spans == []
+
+
+def test_card_number_detector_valid_synthetic():
+    text = f"Карта {SYNTHETIC_CARD_VISA} для оплаты."
+    spans = CardNumberDetector().detect(text)
+    assert len(spans) == 1
+    assert spans[0].type == "CARD_NUMBER"
+    assert spans[0].metadata.get("checksum_valid") is True
+    assert spans[0].confidence >= 0.9
+
+
+def test_card_number_detector_invalid_checksum_not_emitted():
+    text = f"Карта {INVALID_CARD_VISA} для оплаты."
+    spans = CardNumberDetector().detect(text)
     assert spans == []
 
 

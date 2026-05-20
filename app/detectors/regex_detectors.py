@@ -12,6 +12,7 @@ from app.detectors.validators import (
     has_keyword_context,
     normalize_digits,
     validate_bank_account,
+    validate_card_number,
     validate_correspondent_account,
     validate_inn,
     validate_ogrn,
@@ -305,8 +306,21 @@ class CardNumberDetector(BaseDetector):
     _pattern = re.compile(r"\b(?:\d{4}[\s\-]?){3}\d{4}\b")
 
     def detect(self, text: str) -> list[DetectedEntity]:
-        # TODO: Luhn validation
-        return _entities_from_matches(self.entity_type, text, self._pattern, confidence=0.75)
+        entities: list[DetectedEntity] = []
+        for m in self._pattern.finditer(text):
+            raw = m.group()
+            if validate_card_number(raw):
+                entities.append(
+                    DetectedEntity.create(
+                        self.entity_type,
+                        m.start(),
+                        m.end(),
+                        raw,
+                        confidence=CONFIDENCE_VALIDATED,
+                        metadata={"checksum_valid": True},
+                    )
+                )
+        return entities
 
 
 class CadastralNumberDetector(BaseDetector):

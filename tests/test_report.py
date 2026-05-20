@@ -4,7 +4,8 @@ from app.core.mapping import PseudonymizationSession
 from app.core.pipeline import run_anonymization
 from app.core.report import build_anonymization_report
 from app.core.schemas import AnonymizeMode
-from tests.conftest import SYNTHETIC_INN_10
+from app.detectors.validators import normalize_digits
+from tests.conftest import SYNTHETIC_CARD_VISA, SYNTHETIC_INN_10
 
 SYNTHETIC_EMAIL = "test@example.local"
 SYNTHETIC_PERSON = "Иван Тестович"
@@ -31,6 +32,20 @@ def test_report_shape_and_safety():
         for value in entity.get("metadata", {}).values():
             assert value != SYNTHETIC_EMAIL
             assert value != SYNTHETIC_INN_10
+
+
+def test_report_masks_synthetic_card_number():
+    text = f"Оплата картой {SYNTHETIC_CARD_VISA}."
+    response, _policy = run_anonymization(text, AnonymizeMode.REPLACE)
+    report = build_anonymization_report(response, AnonymizeMode.REPLACE)
+
+    raw = json.dumps(report, ensure_ascii=False)
+    assert SYNTHETIC_CARD_VISA not in raw
+    assert normalize_digits(SYNTHETIC_CARD_VISA) not in raw
+
+    card_entities = [e for e in report["entities"] if e["type"] == "CARD_NUMBER"]
+    assert len(card_entities) == 1
+    assert card_entities[0]["value_preview"] == "***"
 
 
 def test_report_includes_safe_source_metadata():
