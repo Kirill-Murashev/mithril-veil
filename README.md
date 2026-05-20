@@ -6,7 +6,7 @@
 
 > **Status:** Pre-release / active development (0.1.x alpha). APIs and presets may change before a stable 1.0 release. See [CHANGELOG.md](CHANGELOG.md) and [docs/release_checklist.md](docs/release_checklist.md).
 
-Detect and anonymize sensitive information in Russian text before sending it to cloud LLMs. Designed for local or VPS deployment with a public, auditable codebase.
+Detect and anonymize sensitive information in Russian text before sending it to cloud LLMs. Designed for local or VPS deployment with a public, auditable codebase. See the [threat model](docs/threat_model.md) for security boundaries and residual risks.
 
 ## Warning
 
@@ -24,7 +24,7 @@ Detect and anonymize sensitive information in Russian text before sending it to 
 - INN/SNILS checksum validation with context-aware weak candidates
 - Priority-based span merging with confidence tie-breaking
 - Detection summary (`entity_counts`, `detectors`) in API and CLI reports
-- Modes: `replace` (typed placeholders), `redact`, and `pseudonymize` (placeholders plus optional encrypted local mapping)
+- Modes: `replace` (typed placeholders), `redact`, and `pseudonymize` (reversible placeholders; optional encrypted CLI-only mapping — not irreversible anonymization)
 - API/CLI never expose original detected values (`value_preview` is always masked)
 
 ## Requirements
@@ -241,7 +241,7 @@ pytest -v
 
 ## Roadmap
 
-See [docs/roadmap.md](docs/roadmap.md) — presets, NER, DOCX/PDF ingestion, encrypted reversible mapping.
+See [docs/roadmap.md](docs/roadmap.md) — batch CLI, RTF, de-anonymization design (planned).
 
 ## License
 

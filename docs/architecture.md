@@ -1,6 +1,6 @@
 # Architecture
 
-Mithril Veil is a local-first service that detects Russian PII in text and returns anonymized output suitable for LLM workflows.
+Mithril Veil is a local-first service that detects Russian PII in text and returns anonymized output suitable for LLM workflows. Security boundaries and residual risks are documented in [threat_model.md](threat_model.md).
 
 ## Layers
 
@@ -74,7 +74,7 @@ Canonical encryption module: **`app/security/encrypted_mapping.py`** (PBKDF2 + F
 | CLI `replace` / `redact` | No | No | No mapping block |
 | CLI `pseudonymize` | Yes | Only with `--mapping-output` (`.json.enc`) | `mapping.written` / `mapping.encrypted` only |
 
-Passphrase for encrypted mapping files comes from an environment variable (default `MITHRIL_VEIL_MAPPING_PASSPHRASE`, override `--mapping-passphrase-env`). Mapping output path must differ from input, anonymized output, and report paths. Original span text never appears in stdout, stderr, API JSON, or report JSON.
+Passphrase for encrypted mapping files comes from an environment variable (default `MITHRIL_VEIL_MAPPING_PASSPHRASE`, override `--mapping-passphrase-env`). Mapping output path must differ from input, anonymized output, and report paths. Original span text never appears in stdout, stderr, API JSON, or report JSON. **`pseudonymize` is reversible** when a mapping file exists; the API does not write or return mappings. No OCR, image-only PDF, or encrypted PDF ingestion.
 
 ## CLI file flow
 

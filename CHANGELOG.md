@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **Threat model (Slice 9)** — expanded [docs/threat_model.md](docs/threat_model.md) for encrypted mapping, passphrase handling, trust boundaries, and residual risks.
+- **Security checklist** — reversible mapping / pseudonymization section and pre-release checks in [docs/security_checklist.md](docs/security_checklist.md).
+
 - **`pseudonymize` mode** — deterministic typed placeholders with optional reversible mapping kept in memory during a run; API responses never include mapping payloads or raw detected values.
 - **Encrypted local mapping files** — CLI `--mapping-output` (`.json.enc` only) with passphrase from `MITHRIL_VEIL_MAPPING_PASSPHRASE` (override via `--mapping-passphrase-env`); refuse overwrite unless `--force`.
 - **Safe report mapping metadata** — reports may include only `mapping.written` and `mapping.encrypted` flags, never placeholder-to-original entries.

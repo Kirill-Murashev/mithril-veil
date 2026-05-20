@@ -11,13 +11,13 @@ Do **not** include real personal data, real documents, real bank statements, con
 
 Use **synthetic** placeholders only (e.g. `test@example.local`, obviously fake IDs).
 
-For contributor and release checks, see [docs/security_checklist.md](docs/security_checklist.md).
+For contributor and release checks, see [docs/security_checklist.md](docs/security_checklist.md). For assets, trust boundaries, threats, and residual risks, see [docs/threat_model.md](docs/threat_model.md).
 
 ## Mapping files
 
 Reversible anonymization mapping files must never be committed. Patterns such as `mapping*.json` and `mapping*.json.enc` are gitignored.
 
-CLI mapping output is **encrypted only** (`.json.enc` envelope with PBKDF2 + Fernet via `app/security/encrypted_mapping.py`). The HTTP API never writes or returns mapping data. Store passphrases **outside the repository** (e.g. `MITHRIL_VEIL_MAPPING_PASSPHRASE`); never commit passphrases or attach mapping files to issues, CI logs, or chat. Even encrypted mapping files are highly sensitive—treat them like key material: restrict filesystem permissions and delete when no longer needed.
+CLI mapping output is **encrypted only** (`.json.enc` envelope with PBKDF2 + Fernet via `app/security/encrypted_mapping.py`). The HTTP API never writes or returns mapping data. **`pseudonymize` is reversible** if you keep the mapping file and passphrase; use `replace` or `redact` when you need irreversible sanitization before a cloud LLM. Store passphrases **outside the repository** (e.g. `MITHRIL_VEIL_MAPPING_PASSPHRASE`); never commit passphrases or attach mapping files to issues, CI logs, or chat. Even encrypted mapping files are highly sensitive—treat them like key material: restrict filesystem permissions and delete when no longer needed.
 
 ## Local-first security model
 
