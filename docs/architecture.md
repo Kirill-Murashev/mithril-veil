@@ -56,7 +56,7 @@ Internal `DetectedEntity.text` is used only in-process. It must not be logged, p
 | `.txt`, `.md` | UTF-8 | Direct read |
 | `.docx` | `python-docx` | Paragraphs + table cells → plain text |
 | `.pdf` | `pypdf` | Text extraction only; no OCR |
-| `.rtf` | `striprtf` | Plain text only; no embedded objects/images; empty extract → `EmptyExtractedText` |
+| `.rtf` | `striprtf` | Best-effort plain text; UTF-8 then cp1251/latin-1; `\\bin` hex stripped; no objects/images; errors never echo file content |
 | Encrypted PDF | — | Rejected |
 | Image-only PDF | — | Rejected (no extractable text) |
 

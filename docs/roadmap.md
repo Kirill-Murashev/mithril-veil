@@ -17,6 +17,7 @@
 - [x] **Slice 10: CLI batch directory anonymization** (`anonymize-dir`, no batch mapping)
 - [x] **Slice 10.1: batch CLI hardening** (symlinks, collisions, report safety, exit codes)
 - [x] **Slice 11: RTF text ingestion** (plain text via `striprtf`; no embedded objects/OCR)
+- [x] **Slice 11.1: RTF ingestion hardening** (encoding, malformed RTF, binary artifact filter)
 - [x] Synthetic test fixtures only
 
 ## Next

@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **Slice 11.1 RTF hardening** — UTF-8/cp1251/latin-1 decode paths; best-effort malformed RTF; post-filter for `\\bin` hex artifacts and control chars; safe exception wrapping without document content in messages.
 - **Slice 10.1 batch hardening** — do not follow symlinked directories; skip symlinked supported files; skip hidden path segments (including under hidden directories) unless `--include-hidden`; case-insensitive extension matching; preflight duplicate output targets and output writability before processing; reject `--report` inside input or equal to a batch output path; deterministic batch report ordering and per-status skip counts; exit code `1` when any file fails, `2` for unsafe path/report conflicts.
 - **Threat model (Slice 9)** — expanded [docs/threat_model.md](docs/threat_model.md) for encrypted mapping, passphrase handling, trust boundaries, and residual risks.
 - **Security checklist** — reversible mapping / pseudonymization section and pre-release checks in [docs/security_checklist.md](docs/security_checklist.md).

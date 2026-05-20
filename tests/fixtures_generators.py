@@ -6,9 +6,21 @@ SYNTHETIC_CONTACT_LINE = "Контакт: test@example.local"
 
 
 def write_synthetic_rtf(path: Path, text: str = SYNTHETIC_CONTACT_LINE) -> None:
-    """Write a minimal synthetic RTF fixture (plain-text extraction only)."""
+    """Write a minimal synthetic UTF-8 RTF fixture (plain-text extraction only)."""
     escaped = text.replace("\\", "\\\\").replace("{", "\\{").replace("}", "\\}")
     body = f"{{\\rtf1\\ansi {escaped}}}"
+    path.write_text(body, encoding="utf-8")
+
+
+def write_synthetic_rtf_cp1251(path: Path, text: str = SYNTHETIC_CONTACT_LINE) -> None:
+    """Write a legacy cp1251 RTF with \\ansicpg1251 (synthetic Cyrillic-safe bytes only)."""
+    payload = text.encode("cp1251")
+    path.write_bytes(b"{\\rtf1\\ansi\\ansicpg1251 " + payload + b"}")
+
+
+def write_synthetic_rtf_unicode_escapes(path: Path) -> None:
+    """Write RTF using \\u escape sequences for Cyrillic (Иван + synthetic email)."""
+    body = r"{\rtf1\ansi \u1048?\u1072?\u1085? test@example.local}"
     path.write_text(body, encoding="utf-8")
 
 

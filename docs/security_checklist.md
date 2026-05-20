@@ -41,6 +41,7 @@ Use this checklist when changing detection, I/O, logging, mapping, CI, or releas
 ## RTF ingestion
 
 - [ ] RTF input uses plain-text extraction only (`striprtf`); no format preservation or embedded object/image extraction
+- [ ] Malformed RTF is best-effort; `\\bin`/`\\pict`/`\\object` payloads must not appear in extracted text or errors
 - [ ] Empty or unreadable RTF fails with safe messages (no raw document content in errors)
 
 ## Batch CLI (`anonymize-dir`)

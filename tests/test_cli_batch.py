@@ -332,6 +332,120 @@ def test_batch_processes_rtf_uppercase_extension(tmp_path: Path):
     assert SYNTHETIC_EMAIL not in err
 
 
+def test_batch_malformed_rtf_failed_report_no_raw_leak(tmp_path: Path):
+    input_dir = tmp_path / "in"
+    input_dir.mkdir()
+    (input_dir / "bad.rtf").write_text("{\\rtf1}", encoding="utf-8")
+    write_synthetic_rtf(input_dir / "good.rtf")
+    output_dir = tmp_path / "out"
+    report_path = tmp_path / "report.json"
+    code, out, err = run_main(
+        "anonymize-dir",
+        str(input_dir),
+        "--output-dir",
+        str(output_dir),
+        "--mode",
+        "replace",
+        "--report",
+        str(report_path),
+    )
+    assert code == 1
+    assert SYNTHETIC_EMAIL not in out
+    assert SYNTHETIC_EMAIL not in err
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["failed_count"] == 1
+    failed = [f for f in report["files"] if f["status"] == "failed"]
+    assert failed[0]["relative_path"] == "bad.rtf"
+    assert SYNTHETIC_EMAIL not in json.dumps(report)
+    assert (output_dir / "good.anonymized.txt").is_file()
+
+
+def test_batch_fail_fast_on_malformed_rtf(tmp_path: Path):
+    input_dir = tmp_path / "in"
+    input_dir.mkdir()
+    (input_dir / "bad.rtf").write_text("{\\rtf1}", encoding="utf-8")
+    write_synthetic_rtf(input_dir / "good.rtf")
+    output_dir = tmp_path / "out"
+    code, _, _ = run_main(
+        "anonymize-dir",
+        str(input_dir),
+        "--output-dir",
+        str(output_dir),
+        "--mode",
+        "replace",
+        "--fail-fast",
+    )
+    assert code == 1
+    assert not (output_dir / "good.anonymized.txt").exists()
+
+
+def test_batch_skips_symlinked_rtf(tmp_path: Path):
+    import os
+
+    input_dir = tmp_path / "in"
+    input_dir.mkdir()
+    real = input_dir / "real.rtf"
+    write_synthetic_rtf(real)
+    os.symlink(real, input_dir / "link.rtf")
+    output_dir = tmp_path / "out"
+    report_path = tmp_path / "report.json"
+    code, _, err = run_main(
+        "anonymize-dir",
+        str(input_dir),
+        "--output-dir",
+        str(output_dir),
+        "--mode",
+        "replace",
+        "--report",
+        str(report_path),
+    )
+    assert code == 0
+    assert (output_dir / "real.anonymized.txt").is_file()
+    assert not (output_dir / "link.anonymized.txt").exists()
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["skipped_symlink_count"] == 1
+    assert SYNTHETIC_EMAIL not in err
+
+
+def test_batch_skips_hidden_rtf_by_default(tmp_path: Path):
+    input_dir = tmp_path / "in"
+    hidden = input_dir / ".vault"
+    hidden.mkdir(parents=True)
+    write_synthetic_rtf(hidden / "secret.rtf")
+    write_synthetic_rtf(input_dir / "visible.rtf")
+    output_dir = tmp_path / "out"
+    code, _, _ = run_main(
+        "anonymize-dir",
+        str(input_dir),
+        "--output-dir",
+        str(output_dir),
+        "--mode",
+        "replace",
+    )
+    assert code == 0
+    assert (output_dir / "visible.anonymized.txt").is_file()
+    assert not (output_dir / ".vault" / "secret.anonymized.txt").exists()
+
+
+def test_batch_include_hidden_rtf(tmp_path: Path):
+    input_dir = tmp_path / "in"
+    hidden = input_dir / ".vault"
+    hidden.mkdir(parents=True)
+    write_synthetic_rtf(hidden / "secret.rtf")
+    output_dir = tmp_path / "out"
+    code, _, _ = run_main(
+        "anonymize-dir",
+        str(input_dir),
+        "--output-dir",
+        str(output_dir),
+        "--mode",
+        "replace",
+        "--include-hidden",
+    )
+    assert code == 0
+    assert (output_dir / ".vault" / "secret.anonymized.txt").is_file()
+
+
 def test_batch_empty_rtf_fails_without_raw_leak(tmp_path: Path):
     input_dir = tmp_path / "in"
     input_dir.mkdir()

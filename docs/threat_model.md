@@ -200,7 +200,7 @@ The following are **explicitly out of scope** for 0.1.x:
 | Irreversible privacy proofs | No k-anonymity / DP |
 | OCR / image-only PDF | Rejected or empty extract |
 | Format-preserving redaction | Output is plain text only |
-| RTF ingestion | Plain text via `striprtf` only; no images/objects/format preservation |
+| RTF ingestion | Best-effort plain text via `striprtf`; UTF-8/cp1251 decode; `\\bin` artifacts filtered; no images/objects/format preservation |
 | User authentication / multi-tenant SaaS | Single-tenant self-hosted assumption |
 | Server-side mapping persistence | API does not write mappings |
 | De-anonymization / restore product workflow | Not implemented |

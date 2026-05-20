@@ -182,7 +182,7 @@ def test_empty_rtf_file_bytes_raises(tmp_path):
         read_rtf_text(path)
 
 
-def test_rtf_binary_blob_does_not_crash(tmp_path):
+def test_rtf_binary_blob_strips_hex_artifacts(tmp_path):
     path = tmp_path / "with_bin.rtf"
     path.write_text(
         "{\\rtf1\\ansi Contact: test@example.local \\bin8 0102030405060708}",
@@ -190,6 +190,7 @@ def test_rtf_binary_blob_does_not_crash(tmp_path):
     )
     text = read_rtf_text(path)
     assert SYNTHETIC_EMAIL in text
+    assert "0102030405060708" not in text
 
 
 def test_rtf_error_messages_contain_no_raw_email(tmp_path):

@@ -310,6 +310,29 @@ def test_anonymize_file_rtf_to_txt(tmp_path):
     assert SYNTHETIC_EMAIL not in json.dumps(report)
 
 
+def test_anonymize_file_rtf_sanitizes_phone_on_stdout(tmp_path):
+    from tests.fixtures_generators import write_synthetic_rtf
+
+    phone = "+7 900 000-00-00"
+    input_path = tmp_path / "in.rtf"
+    output_path = tmp_path / "out.txt"
+    write_synthetic_rtf(input_path, f"Phone {phone}")
+    code, _, err = run_main(
+        "anonymize-file",
+        "--input",
+        str(input_path),
+        "--output",
+        str(output_path),
+        "--mode",
+        "replace",
+    )
+    assert code == 0
+    out_text = output_path.read_text(encoding="utf-8")
+    assert phone not in out_text
+    assert phone not in err
+    assert "[PHONE_" in out_text
+
+
 def test_anonymize_file_empty_rtf_fails_safely(tmp_path):
     input_path = tmp_path / "in.rtf"
     output_path = tmp_path / "out.txt"
