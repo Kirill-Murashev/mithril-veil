@@ -208,6 +208,8 @@ The following are **explicitly out of scope** for 0.1.x:
 | Enterprise key management (HSM, Vault integration) | Passphrase via env only |
 | Web UI | Not implemented |
 | Batch API endpoint | CLI-only batch in 0.1.x (`anonymize-dir`) |
+| Batch symlink traversal | Not followed; symlinked supported files skipped |
+| Batch output stem collisions | Rejected at preflight (e.g. `a.txt` + `a.md` → same `a.anonymized.txt`) |
 | Batch encrypted mapping | Not implemented; use per-file `anonymize-file` |
 | Telemetry / phone-home | None by design |
 

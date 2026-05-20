@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -12,20 +13,29 @@ from app.document_io.base import ensure_safe_report_path
 from app.document_io.batch import BatchFileResult, BatchFileStatus
 
 
+@dataclass(frozen=True)
+class BatchResultCounts:
+    processed: int
+    skipped: int
+    failed: int
+    skipped_unsupported: int
+    skipped_hidden: int
+    skipped_symlink: int
+
+
 def build_batch_anonymization_report(
     *,
     mode: AnonymizeMode,
     input_dir: Path,
     output_dir: Path,
     total_files_seen: int,
-    processed_count: int,
-    skipped_count: int,
-    failed_count: int,
+    counts: BatchResultCounts,
     file_results: list[BatchFileResult],
     warnings: list[str],
     preset: str | None = None,
 ) -> dict[str, Any]:
     """Build a safe batch report (no raw text or detected values)."""
+    ordered = sorted(file_results, key=lambda entry: (entry.relative_path, entry.status.value))
     payload: dict[str, Any] = {
         "service": "mithril-veil",
         "version": __version__,
@@ -34,9 +44,12 @@ def build_batch_anonymization_report(
         "input_dir": str(input_dir.resolve()),
         "output_dir": str(output_dir.resolve()),
         "total_files_seen": total_files_seen,
-        "processed_count": processed_count,
-        "skipped_count": skipped_count,
-        "failed_count": failed_count,
+        "processed_count": counts.processed,
+        "skipped_count": counts.skipped,
+        "failed_count": counts.failed,
+        "skipped_unsupported_count": counts.skipped_unsupported,
+        "skipped_hidden_count": counts.skipped_hidden,
+        "skipped_symlink_count": counts.skipped_symlink,
         "files": [
             {
                 "relative_path": entry.relative_path,
@@ -58,7 +71,7 @@ def build_batch_anonymization_report(
                     else {}
                 ),
             }
-            for entry in file_results
+            for entry in ordered
         ],
         "warnings": list(warnings),
     }
@@ -86,8 +99,20 @@ def write_batch_anonymization_report(
         raise MithrilVeilError(f"Cannot write report: {report_path}") from exc
 
 
-def count_batch_results(file_results: list[BatchFileResult]) -> tuple[int, int, int]:
+def count_batch_results(file_results: list[BatchFileResult]) -> BatchResultCounts:
     processed = sum(1 for r in file_results if r.status == BatchFileStatus.PROCESSED)
-    skipped = sum(1 for r in file_results if r.status == BatchFileStatus.SKIPPED_UNSUPPORTED)
+    skipped_unsupported = sum(
+        1 for r in file_results if r.status == BatchFileStatus.SKIPPED_UNSUPPORTED
+    )
+    skipped_hidden = sum(1 for r in file_results if r.status == BatchFileStatus.SKIPPED_HIDDEN)
+    skipped_symlink = sum(1 for r in file_results if r.status == BatchFileStatus.SKIPPED_SYMLINK)
     failed = sum(1 for r in file_results if r.status == BatchFileStatus.FAILED)
-    return processed, skipped, failed
+    skipped = skipped_unsupported + skipped_hidden + skipped_symlink
+    return BatchResultCounts(
+        processed=processed,
+        skipped=skipped,
+        failed=failed,
+        skipped_unsupported=skipped_unsupported,
+        skipped_hidden=skipped_hidden,
+        skipped_symlink=skipped_symlink,
+    )

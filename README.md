@@ -99,7 +99,7 @@ mithril-veil anonymize-dir ./documents --output-dir ./sanitized \
   --mode replace --report ./batch-report.json
 ```
 
-- **`anonymize-dir`** — recursively processes supported files under a directory; writes mirrored `*.anonymized.txt` paths under `--output-dir`; optional aggregate safe `--report`. Supports **`replace` and `redact` only** (rejects `pseudonymize` and `--mapping-output`). See [threat model](docs/threat_model.md).
+- **`anonymize-dir`** — recursively processes supported files under a directory (case-insensitive extensions); writes `*.anonymized.txt` under `--output-dir`; optional aggregate safe `--report`. Skips symlinked files and hidden paths (unless `--include-hidden`); rejects duplicate output stems and unsafe report paths before processing. Supports **`replace` and `redact` only** (rejects `pseudonymize` and `--mapping-output`). Exit code `1` if any file fails. See [threat model](docs/threat_model.md).
 - Supported **input**: `.txt`, `.md`, `.markdown`, `.docx`, `.pdf` (text-based only)
 - Supported **output**: `.txt`, `.md`, `.markdown` (sanitized plain text)
 - **Not supported**: OCR, image-only PDFs, encrypted PDFs, `.rtf`

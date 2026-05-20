@@ -15,6 +15,7 @@
 - [x] **Slice 8 / 8.1: reversible pseudonymization** with encrypted CLI mapping (`.json.enc`)
 - [x] **Slice 9: threat model and security regression documentation**
 - [x] **Slice 10: CLI batch directory anonymization** (`anonymize-dir`, no batch mapping)
+- [x] **Slice 10.1: batch CLI hardening** (symlinks, collisions, report safety, exit codes)
 - [x] Synthetic test fixtures only
 
 ## Next

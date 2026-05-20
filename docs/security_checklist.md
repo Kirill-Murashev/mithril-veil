@@ -41,9 +41,12 @@ Use this checklist when changing detection, I/O, logging, mapping, CI, or releas
 ## Batch CLI (`anonymize-dir`)
 
 - [ ] Batch supports **replace** and **redact** only; reject `pseudonymize` and `--mapping-output`
-- [ ] Output directory must not equal or sit inside the input directory
-- [ ] Aggregate batch report contains no raw text or detected values
-- [ ] Unsupported extensions are skipped with safe warnings only
+- [ ] Output directory must not equal or sit inside the input directory (resolved paths)
+- [ ] Symlinked files skipped; symlinked directories not traversed
+- [ ] Hidden path segments skipped unless `--include-hidden`
+- [ ] Duplicate output targets rejected before processing; `--report` not inside input or equal to an output path
+- [ ] Aggregate batch report contains no raw text or detected values; deterministic file entry ordering
+- [ ] Unsupported extensions are skipped with safe warnings only; exit code `1` if any file failed
 
 ## Cloud agents and third parties
 

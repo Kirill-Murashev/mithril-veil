@@ -26,8 +26,10 @@ from app.document_io.batch import (
     BatchFileResult,
     BatchFileStatus,
     collect_batch_input_files,
-    ensure_batch_output_writable,
     ensure_safe_batch_directories,
+    ensure_safe_batch_report_path,
+    find_batch_output_collisions,
+    preflight_batch_output_paths,
     resolve_batch_output_path,
 )
 
@@ -61,6 +63,15 @@ def validate_batch_cli_args(args: argparse.Namespace) -> AnonymizeMode:
     return mode
 
 
+def _append_skip_results(
+    file_results: list[BatchFileResult],
+    paths: list[str],
+    status: BatchFileStatus,
+) -> None:
+    for rel in sorted(paths):
+        file_results.append(BatchFileResult(relative_path=rel, status=status))
+
+
 def cmd_anonymize_dir(
     args: argparse.Namespace,
     *,
@@ -84,17 +95,9 @@ def cmd_anonymize_dir(
         return EXIT_ERROR
 
     report_path = Path(args.report) if getattr(args, "report", None) else None
-    if report_path:
-        from app.document_io.base import ensure_safe_report_path
-
-        try:
-            ensure_safe_report_path(report_path, force=force)
-        except UnsafeFileOperation as exc:
-            print(f"Error: {exc}", file=sys.stderr)
-            return EXIT_UNSAFE
 
     try:
-        supported_files, skipped_paths = collect_batch_input_files(
+        collected = collect_batch_input_files(
             input_dir,
             include_hidden=include_hidden,
             max_files=max_files,
@@ -103,6 +106,39 @@ def cmd_anonymize_dir(
         print(f"Error: {exc}", file=sys.stderr)
         return EXIT_ERROR
 
+    supported_files = collected.supported
+    skipped_paths = collected.skipped_unsupported
+
+    collision_errors = find_batch_output_collisions(supported_files)
+    if collision_errors:
+        for msg in collision_errors:
+            print(f"Error: {msg}", file=sys.stderr)
+        return EXIT_ERROR
+
+    if report_path:
+        try:
+            ensure_safe_batch_report_path(
+                report_path,
+                input_dir,
+                output_dir,
+                supported_files,
+                force=force,
+            )
+        except UnsafeFileOperation as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return EXIT_UNSAFE
+
+    try:
+        preflight_batch_output_paths(
+            input_dir,
+            output_dir,
+            supported_files,
+            force=force,
+        )
+    except UnsafeFileOperation as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return EXIT_UNSAFE
+
     warnings: list[str] = []
     for rel in skipped_paths:
         msg = f"Skipped unsupported file: {rel}"
@@ -110,19 +146,14 @@ def cmd_anonymize_dir(
         print(f"Warning: {msg}", file=sys.stderr)
 
     file_results: list[BatchFileResult] = []
-    for skipped_rel in skipped_paths:
-        file_results.append(
-            BatchFileResult(
-                relative_path=skipped_rel,
-                status=BatchFileStatus.SKIPPED_UNSUPPORTED,
-            )
-        )
+    _append_skip_results(file_results, skipped_paths, BatchFileStatus.SKIPPED_UNSUPPORTED)
+    _append_skip_results(file_results, collected.skipped_hidden, BatchFileStatus.SKIPPED_HIDDEN)
+    _append_skip_results(file_results, collected.skipped_symlink, BatchFileStatus.SKIPPED_SYMLINK)
 
     for batch_file in supported_files:
         rel_str = batch_file.relative_path.as_posix()
         output_path = resolve_batch_output_path(input_dir, output_dir, batch_file.relative_path)
         try:
-            ensure_batch_output_writable(output_path, force=force)
             content, _source = read_document_file(batch_file.absolute_path)
             response, _policy = run_anonymization(content, mode, _resolved=anonymization_kwargs)
             write_text_file(output_path, response.text, force=force)
@@ -165,8 +196,13 @@ def cmd_anonymize_dir(
             if fail_fast:
                 break
 
-    processed, skipped, failed = count_batch_results(file_results)
-    total_seen = len(skipped_paths) + len(supported_files)
+    counts = count_batch_results(file_results)
+    total_seen = (
+        len(skipped_paths)
+        + len(collected.skipped_hidden)
+        + len(collected.skipped_symlink)
+        + len(supported_files)
+    )
 
     if report_path:
         preset = getattr(args, "preset", None)
@@ -175,9 +211,7 @@ def cmd_anonymize_dir(
             input_dir=input_dir,
             output_dir=output_dir,
             total_files_seen=total_seen,
-            processed_count=processed,
-            skipped_count=skipped,
-            failed_count=failed,
+            counts=counts,
             file_results=file_results,
             warnings=warnings,
             preset=preset,
@@ -189,10 +223,11 @@ def cmd_anonymize_dir(
             return EXIT_UNSAFE if isinstance(exc, UnsafeFileOperation) else EXIT_ERROR
 
     print(
-        f"Batch complete: {processed} processed, {skipped} skipped, {failed} failed.",
+        f"Batch complete: {counts.processed} processed, {counts.skipped} skipped, "
+        f"{counts.failed} failed.",
         file=sys.stderr,
     )
 
-    if failed > 0:
+    if counts.failed > 0:
         return EXIT_ERROR
     return EXIT_SUCCESS

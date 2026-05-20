@@ -76,19 +76,21 @@ Canonical encryption module: **`app/security/encrypted_mapping.py`** (PBKDF2 + F
 
 Passphrase for encrypted mapping files comes from an environment variable (default `MITHRIL_VEIL_MAPPING_PASSPHRASE`, override `--mapping-passphrase-env`). Mapping output path must differ from input, anonymized output, and report paths. Original span text never appears in stdout, stderr, API JSON, or report JSON. **`pseudonymize` is reversible** when a mapping file exists; the API does not write or return mappings. No OCR, image-only PDF, or encrypted PDF ingestion.
 
-## CLI batch flow (Slice 10)
+## CLI batch flow (Slice 10 / 10.1)
 
 ```
 mithril-veil anonymize-dir INPUT_DIR --output-dir OUTPUT_DIR
-  → validate input/output directories (no nesting of output inside input)
-  → recursively collect supported files (.txt, .md, .markdown, .docx, .pdf)
+  → validate resolved input/output directories (no nesting; no .. bypass)
+  → walk without following symlinks; skip symlinked files; skip hidden paths unless --include-hidden
+  → collect supported files (case-insensitive extensions)
+  → preflight duplicate output targets and output writability
   → skip unsupported extensions with safe warnings
   → per file: read_document_file → run_anonymization (replace/redact only)
-  → write OUTPUT_DIR/<relative>.anonymized.txt
-  → optional aggregate batch JSON report (safe counts/statuses only)
+  → write OUTPUT_DIR/<stem>.anonymized.txt (colliding stems such as a.txt + a.md are rejected)
+  → optional aggregate batch JSON report (deterministic ordering; safe counts/statuses only)
 ```
 
-Batch mode does **not** support `pseudonymize` or encrypted mapping output (by design).
+Batch mode does **not** support `pseudonymize` or encrypted mapping output (by design). Exit code `0` when no failures; `1` if any file failed; `2` for unsafe directory/report/output conflicts. Per-file failures after preflight may leave earlier outputs on disk; collision and preflight errors write nothing.
 
 ## CLI file flow
 

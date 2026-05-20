@@ -190,7 +190,7 @@ def test_batch_refuses_overwrite_without_force(tmp_path: Path):
         "--mode",
         "replace",
     )
-    assert code == 1
+    assert code == 2
     assert "force" in err.lower() or "exists" in err.lower()
 
 
@@ -305,8 +305,160 @@ def test_batch_max_files_limit(tmp_path: Path):
     assert "limit" in err.lower()
 
 
-def test_batch_module_output_path_convention():
-    from app.document_io.batch import batch_output_relative_path
+def test_batch_case_insensitive_extensions(tmp_path: Path):
+    input_dir = tmp_path / "in"
+    input_dir.mkdir()
+    (input_dir / "UPPER.TXT").write_text(SYNTHETIC_TEXT, encoding="utf-8")
+    output_dir = tmp_path / "out"
+    code, _, _ = run_main(
+        "anonymize-dir",
+        str(input_dir),
+        "--output-dir",
+        str(output_dir),
+        "--mode",
+        "replace",
+    )
+    assert code == 0
+    assert (output_dir / "UPPER.anonymized.txt").is_file()
 
-    assert batch_output_relative_path(Path("docs/a.docx")) == Path("docs/a.anonymized.txt")
-    assert batch_output_relative_path(Path("note.md")) == Path("note.anonymized.txt")
+
+def test_batch_skips_symlinked_file(tmp_path: Path):
+    import os
+
+    input_dir = tmp_path / "in"
+    input_dir.mkdir()
+    real = input_dir / "real.txt"
+    real.write_text(SYNTHETIC_TEXT, encoding="utf-8")
+    os.symlink(real, input_dir / "link.txt")
+    output_dir = tmp_path / "out"
+    report_path = tmp_path / "report.json"
+    code, _, err = run_main(
+        "anonymize-dir",
+        str(input_dir),
+        "--output-dir",
+        str(output_dir),
+        "--mode",
+        "replace",
+        "--report",
+        str(report_path),
+    )
+    assert code == 0
+    assert (output_dir / "real.anonymized.txt").is_file()
+    assert not (output_dir / "link.anonymized.txt").exists()
+    report = json.loads(report_path.read_text(encoding="utf-8"))
+    assert report["skipped_symlink_count"] == 1
+    assert SYNTHETIC_EMAIL not in err
+
+
+def test_batch_output_collision_preflight_no_writes(tmp_path: Path):
+    input_dir = tmp_path / "in"
+    input_dir.mkdir()
+    (input_dir / "a.txt").write_text(SYNTHETIC_TEXT, encoding="utf-8")
+    (input_dir / "a.md").write_text("heading", encoding="utf-8")
+    output_dir = tmp_path / "out"
+    code, _, err = run_main(
+        "anonymize-dir",
+        str(input_dir),
+        "--output-dir",
+        str(output_dir),
+        "--mode",
+        "replace",
+    )
+    assert code == 1
+    assert "collision" in err.lower() or "duplicate" in err.lower()
+    assert not output_dir.exists() or not any(output_dir.iterdir())
+
+
+def test_batch_report_must_not_be_inside_input(tmp_path: Path):
+    input_dir = tmp_path / "in"
+    input_dir.mkdir()
+    (input_dir / "a.txt").write_text(SYNTHETIC_TEXT, encoding="utf-8")
+    code, _, err = run_main(
+        "anonymize-dir",
+        str(input_dir),
+        "--output-dir",
+        str(tmp_path / "out"),
+        "--mode",
+        "replace",
+        "--report",
+        str(input_dir / "batch.json"),
+    )
+    assert code == 2
+    assert "inside" in err.lower() or "input" in err.lower()
+    assert SYNTHETIC_EMAIL not in err
+
+
+def test_batch_report_must_not_equal_output_path(tmp_path: Path):
+    input_dir = tmp_path / "in"
+    input_dir.mkdir()
+    (input_dir / "a.txt").write_text(SYNTHETIC_TEXT, encoding="utf-8")
+    output_dir = tmp_path / "out"
+    code, _, err = run_main(
+        "anonymize-dir",
+        str(input_dir),
+        "--output-dir",
+        str(output_dir),
+        "--mode",
+        "replace",
+        "--report",
+        str(output_dir / "a.anonymized.txt"),
+    )
+    assert code == 2
+    assert "output" in err.lower() or "report" in err.lower()
+
+
+def test_batch_report_ordering_is_stable(tmp_path: Path):
+    input_dir = _setup_batch_input(tmp_path)
+    output_dir = tmp_path / "output"
+    report_a = tmp_path / "report_a.json"
+    report_b = tmp_path / "report_b.json"
+    for report_path in (report_a, report_b):
+        code, _, _ = run_main(
+            "anonymize-dir",
+            str(input_dir),
+            "--output-dir",
+            str(output_dir),
+            "--mode",
+            "replace",
+            "--force",
+            "--report",
+            str(report_path),
+        )
+        assert code == 0
+    paths_a = [e["relative_path"] for e in json.loads(report_a.read_text())["files"]]
+    paths_b = [e["relative_path"] for e in json.loads(report_b.read_text())["files"]]
+    assert paths_a == paths_b == sorted(paths_a)
+
+
+def test_batch_exit_zero_when_only_skips_no_failures(tmp_path: Path):
+    input_dir = tmp_path / "in"
+    input_dir.mkdir()
+    (input_dir / "only.csv").write_text("a,b", encoding="utf-8")
+    code, _, _ = run_main(
+        "anonymize-dir",
+        str(input_dir),
+        "--output-dir",
+        str(tmp_path / "out"),
+        "--mode",
+        "replace",
+    )
+    assert code == 0
+
+
+def test_batch_relative_paths_reject_nested_output(tmp_path: Path):
+    base = tmp_path / "tree"
+    input_dir = base / "input"
+    input_dir.mkdir(parents=True)
+    out_nested = input_dir / "nested" / "out"
+    out_nested.mkdir(parents=True)
+    (input_dir / "a.txt").write_text(SYNTHETIC_TEXT, encoding="utf-8")
+    code, _, err = run_main(
+        "anonymize-dir",
+        str(input_dir),
+        "--output-dir",
+        str(out_nested),
+        "--mode",
+        "replace",
+    )
+    assert code == 2
+    assert SYNTHETIC_EMAIL not in err
