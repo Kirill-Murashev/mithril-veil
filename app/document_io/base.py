@@ -15,6 +15,7 @@ SUPPORTED_INPUT_EXTENSIONS: dict[str, str] = {
     ".docx": "docx",
     ".pdf": "pdf",
     ".rtf": "rtf",
+    ".odt": "odt",
 }
 
 SUPPORTED_OUTPUT_EXTENSIONS: frozenset[str] = frozenset({".txt", ".md", ".markdown"})
@@ -30,7 +31,7 @@ def detect_supported_file_type(path: Path) -> str:
     if suffix:
         raise UnsupportedDocumentType(f"Unsupported file type: {suffix}")
     raise UnsupportedDocumentType(
-        "File has no extension; supported types: .txt, .md, .markdown, .docx, .pdf, .rtf"
+        "File has no extension; supported types: .txt, .md, .markdown, .docx, .pdf, .rtf, .odt"
     )
 
 
@@ -136,6 +137,10 @@ def read_document_file(path: Path) -> tuple[str, SourceMetadata]:
         from app.document_io.rtf import read_rtf_text
 
         text = read_rtf_text(path)
+    elif input_type == "odt":
+        from app.document_io.odt import read_odt_text
+
+        text = read_odt_text(path)
     else:
         raise UnsupportedDocumentType(f"Unsupported input type: {input_type}")
 

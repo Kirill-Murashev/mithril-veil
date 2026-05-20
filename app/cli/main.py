@@ -403,7 +403,7 @@ def build_parser() -> argparse.ArgumentParser:
     file_parser.add_argument(
         "--input",
         required=True,
-        help="Input file path (.txt, .md, .docx, .pdf)",
+        help="Input file path (.txt, .md, .docx, .pdf, .rtf, .odt)",
     )
     file_parser.add_argument("--output", required=True, help="Output file path")
     _add_common_anonymize_args(file_parser)

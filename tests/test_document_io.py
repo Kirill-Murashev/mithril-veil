@@ -16,12 +16,14 @@ from app.document_io.base import (
 )
 from app.document_io.docx import read_docx_text
 from app.document_io.limits import MAX_INPUT_FILE_BYTES, MAX_PDF_PAGES
+from app.document_io.odt import read_odt_text
 from app.document_io.pdf import read_pdf_text
 from app.document_io.rtf import read_rtf_text
 from tests.fixtures_generators import (
     write_blank_pdf,
     write_encrypted_pdf,
     write_synthetic_docx,
+    write_synthetic_odt,
     write_synthetic_pdf,
     write_synthetic_rtf,
 )
@@ -63,6 +65,19 @@ def test_detect_supported_rtf_uppercase_extension(tmp_path):
     path = tmp_path / "SAMPLE.RTF"
     write_synthetic_rtf(path)
     assert detect_supported_file_type(path) == "rtf"
+
+
+def test_detect_supported_odt(tmp_path):
+    path = tmp_path / "sample.odt"
+    write_synthetic_odt(path)
+    assert detect_supported_file_type(path) == "odt"
+
+
+def test_read_odt_extracts_synthetic_text(tmp_path):
+    path = tmp_path / "in.odt"
+    write_synthetic_odt(path)
+    text = read_odt_text(path)
+    assert SYNTHETIC_EMAIL in text
 
 
 def test_read_docx_extracts_synthetic_text(tmp_path):

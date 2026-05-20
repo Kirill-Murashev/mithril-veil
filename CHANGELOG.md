@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **ODT text ingestion (Slice 12)** — `.odt` input via ZIP `content.xml` plain-text extraction (`zipfile` + stdlib XML) for `anonymize-file` and `anonymize-dir` (paragraphs, headings, tables; no formatting, embedded objects, or images).
 - **RTF text ingestion (Slice 11)** — `.rtf` input via `striprtf` plain-text extraction for `anonymize-file` and `anonymize-dir` (no formatting, embedded objects, or images).
 - **CLI `anonymize-dir`** — recursive batch processing for `.txt`, `.md`, `.markdown`, `.docx`, and text-based `.pdf`; outputs `*.anonymized.txt` under `--output-dir`; aggregate safe JSON report; `replace`/`redact` only (no batch mapping or `pseudonymize`).
 

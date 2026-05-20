@@ -100,9 +100,9 @@ mithril-veil anonymize-dir ./documents --output-dir ./sanitized \
 ```
 
 - **`anonymize-dir`** — recursively processes supported files under a directory (case-insensitive extensions); writes `*.anonymized.txt` under `--output-dir`; optional aggregate safe `--report`. Skips symlinked files and hidden paths (unless `--include-hidden`); rejects duplicate output stems and unsafe report paths before processing. Supports **`replace` and `redact` only** (rejects `pseudonymize` and `--mapping-output`). Exit code `1` if any file fails. See [threat model](docs/threat_model.md).
-- Supported **input**: `.txt`, `.md`, `.markdown`, `.docx`, `.rtf` (best-effort plain text via `striprtf`; UTF-8/cp1251; no embedded objects), `.pdf` (text-based only)
+- Supported **input**: `.txt`, `.md`, `.markdown`, `.docx`, `.odt` (plain text from ZIP `content.xml`; stdlib XML; no embedded objects), `.rtf` (best-effort plain text via `striprtf`; UTF-8/cp1251; no embedded objects), `.pdf` (text-based only)
 - Supported **output**: `.txt`, `.md`, `.markdown` (sanitized plain text)
-- **Not supported**: OCR, image-only PDFs, encrypted PDFs, format-preserving DOCX/PDF/RTF output, embedded RTF objects/images
+- **Not supported**: OCR, image-only PDFs, encrypted PDFs, format-preserving DOCX/PDF/RTF/ODT output, embedded RTF/ODT objects/images
 - Limits: 10 MB max input size; 50 PDF pages max
 - The CLI refuses to overwrite the input file (`--output` must differ from `--input`)
 - Use `--force` to overwrite an existing output or report file
