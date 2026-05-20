@@ -142,7 +142,7 @@ Required if application code, dependencies, CI workflows, or security-sensitive 
 
 ## Slice recommendation
 
-**Ready for maintainer tagging decision (Option A)** — local gates and latest `main` CI pass; version metadata consistent; security/hygiene audit clean; `v0.1.0` tag absent locally and on `origin`. Final approval remains with the maintainer (CHANGELOG move at tag time, GitHub release notes, optional UI re-check of CI).
+**Ready for explicit maintainer-approved tagging (Option A)** — local gates and `main` CI pass on `457a5e3`; `CHANGELOG.md` finalized for v0.1.0; version metadata and security/hygiene audit clean; `v0.1.0` tag absent. Final approval remains with the maintainer before tag push and GitHub release notes.
 
 ---
 
@@ -158,3 +158,18 @@ Required if application code, dependencies, CI workflows, or security-sensitive 
 | Tag or GitHub release created | **No** |
 
 **Maintainer:** Tagging `v0.1.0` and publishing a GitHub release remain separate, explicit approvals. This slice pushed the decision note and confirmed CI on `ecccffe` only.
+
+---
+
+## Final pre-tag confirmation (2026-05-20)
+
+| Item | Result |
+|------|--------|
+| CHANGELOG finalization commit | `457a5e3` — Finalize CHANGELOG for v0.1.0 pre-tag release |
+| `CHANGELOG.md` | `[Unreleased]` empty; all RC entries under `[0.1.0] - 2026-05-20` |
+| `HEAD` / `origin/main` | Both **`457a5e3`** after push |
+| CI on CHANGELOG commit | **Success** — run [26186839511](https://github.com/Kirill-Murashev/mithril-veil/actions/runs/26186839511), `head_sha` `457a5e355b1f8955265a172789fc718f46883a63` (short: `457a5e3`), job `test (3.12)` ~28s |
+| `v0.1.0` tag (local / remote) | **Still absent** |
+| GitHub release | **Not created** |
+
+**Maintainer decision still required** before `git tag -a v0.1.0` and `git push origin v0.1.0`. Publish GitHub release notes from `CHANGELOG.md` `[0.1.0]` after tagging.
