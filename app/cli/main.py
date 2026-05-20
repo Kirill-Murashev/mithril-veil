@@ -156,9 +156,7 @@ def _add_common_anonymize_args(parser: argparse.ArgumentParser) -> None:
 
 def _validate_mapping_output_args(args: argparse.Namespace, mode: AnonymizeMode) -> None:
     if getattr(args, "mapping_output", None) and mode != AnonymizeMode.PSEUDONYMIZE:
-        raise MithrilVeilError(
-            "--mapping-output is only supported when --mode is pseudonymize."
-        )
+        raise MithrilVeilError("--mapping-output is only supported when --mode is pseudonymize.")
 
 
 def _pseudonymization_session(mode: AnonymizeMode) -> PseudonymizationSession | None:
