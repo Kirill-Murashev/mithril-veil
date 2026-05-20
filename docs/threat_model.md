@@ -128,6 +128,7 @@ Users who need **irreversible** sanitization before a cloud LLM must use `replac
 | T16 | Undetected entities remain in “sanitized” output | Quasi-identifiers, names without NER, free-text facts | **High** (inherent) |
 | T17 | NER false negatives / false positives | Missed PII or over-redaction | Medium |
 | T18 | Self-hosted API exposed without TLS/auth | Network adversary reads submissions | Medium (deployment) |
+| T19 | Batch output directory inside input tree | Re-processing sanitized files on later runs | Low (mitigated: path rejection) |
 
 ---
 
@@ -206,7 +207,8 @@ The following are **explicitly out of scope** for 0.1.x:
 | Central audit log system | Not implemented |
 | Enterprise key management (HSM, Vault integration) | Passphrase via env only |
 | Web UI | Not implemented |
-| Batch directory CLI | Planned future slice |
+| Batch API endpoint | CLI-only batch in 0.1.x (`anonymize-dir`) |
+| Batch encrypted mapping | Not implemented; use per-file `anonymize-file` |
 | Telemetry / phone-home | None by design |
 
 Future slices may change scope; this document must be updated when they do.

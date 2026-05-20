@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **CLI `anonymize-dir`** — recursive batch processing for `.txt`, `.md`, `.markdown`, `.docx`, and text-based `.pdf`; outputs `*.anonymized.txt` under `--output-dir`; aggregate safe JSON report; `replace`/`redact` only (no batch mapping or `pseudonymize`).
 - **Threat model (Slice 9)** — expanded [docs/threat_model.md](docs/threat_model.md) for encrypted mapping, passphrase handling, trust boundaries, and residual risks.
 - **Security checklist** — reversible mapping / pseudonymization section and pre-release checks in [docs/security_checklist.md](docs/security_checklist.md).
 

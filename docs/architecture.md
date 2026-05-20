@@ -7,7 +7,7 @@ Mithril Veil is a local-first service that detects Russian PII in text and retur
 | Layer | Location | Role |
 |-------|----------|------|
 | **API** | `app/api/` | FastAPI HTTP endpoints |
-| **CLI** | `app/cli/` | `mithril-veil` commands for text, stdin, and files |
+| **CLI** | `app/cli/` | `mithril-veil` commands for text, stdin, files, and batch directories |
 | **Document I/O** | `app/document_io/` | UTF-8 text, DOCX (`python-docx`), text-based PDF (`pypdf`) |
 | **Presets** | `app/presets/`, `app/core/presets.py` | YAML policy profiles (entity types, detector defaults) |
 | **Pipeline** | `app/core/pipeline.py` | Shared detection → merge → filter → anonymize flow |
@@ -75,6 +75,20 @@ Canonical encryption module: **`app/security/encrypted_mapping.py`** (PBKDF2 + F
 | CLI `pseudonymize` | Yes | Only with `--mapping-output` (`.json.enc`) | `mapping.written` / `mapping.encrypted` only |
 
 Passphrase for encrypted mapping files comes from an environment variable (default `MITHRIL_VEIL_MAPPING_PASSPHRASE`, override `--mapping-passphrase-env`). Mapping output path must differ from input, anonymized output, and report paths. Original span text never appears in stdout, stderr, API JSON, or report JSON. **`pseudonymize` is reversible** when a mapping file exists; the API does not write or return mappings. No OCR, image-only PDF, or encrypted PDF ingestion.
+
+## CLI batch flow (Slice 10)
+
+```
+mithril-veil anonymize-dir INPUT_DIR --output-dir OUTPUT_DIR
+  → validate input/output directories (no nesting of output inside input)
+  → recursively collect supported files (.txt, .md, .markdown, .docx, .pdf)
+  → skip unsupported extensions with safe warnings
+  → per file: read_document_file → run_anonymization (replace/redact only)
+  → write OUTPUT_DIR/<relative>.anonymized.txt
+  → optional aggregate batch JSON report (safe counts/statuses only)
+```
+
+Batch mode does **not** support `pseudonymize` or encrypted mapping output (by design).
 
 ## CLI file flow
 

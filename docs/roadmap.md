@@ -14,11 +14,11 @@
 - [x] **Slice 7: CI and release hygiene** (GitHub Actions, Makefile, CHANGELOG, release/security checklists)
 - [x] **Slice 8 / 8.1: reversible pseudonymization** with encrypted CLI mapping (`.json.enc`)
 - [x] **Slice 9: threat model and security regression documentation**
+- [x] **Slice 10: CLI batch directory anonymization** (`anonymize-dir`, no batch mapping)
 - [x] Synthetic test fixtures only
 
 ## Next
 
-- CLI batch / directory mode (safe per-file reports; mapping excluded by default)
 - RTF ingestion (safe text extraction; synthetic fixtures only)
 - OGRN/OGRNIP/BANK_ACCOUNT checksum validation (detection hardening)
 - De-anonymization **design document only** (no product implementation yet)

@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 from app import __version__
+from app.cli.batch_cmd import cmd_anonymize_dir
 from app.core.exceptions import (
     EmptyExtractedText,
     EncryptedDocumentUnsupported,
@@ -87,6 +88,63 @@ def _anonymization_kwargs(args: argparse.Namespace) -> dict:
         gliner_labels=labels,
         gliner_threshold=threshold,
         gliner_model_name=getattr(args, "gliner_model_name", None),
+    )
+
+
+def _add_batch_anonymize_args(parser: argparse.ArgumentParser) -> None:
+    """Shared flags for anonymize-dir (no pseudonymize / mapping)."""
+    parser.add_argument(
+        "--mode",
+        default="replace",
+        choices=[m.value for m in AnonymizeMode],
+        help="Anonymization mode (default: replace; batch supports replace/redact only)",
+    )
+    parser.add_argument(
+        "--mapping-output",
+        default=None,
+        metavar="PATH",
+        help="Not supported for batch (use anonymize-file with pseudonymize)",
+    )
+    parser.add_argument(
+        "--preset",
+        default=None,
+        metavar="PRESET_ID",
+        help="Policy preset (e.g. general_ru, legal_ru, valuation_ru)",
+    )
+    parser.add_argument(
+        "--use-ner",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Enable/disable local Natasha NER (overrides preset default)",
+    )
+    parser.add_argument(
+        "--use-gliner",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Enable/disable local GLiNER (overrides preset default)",
+    )
+    parser.add_argument(
+        "--gliner-label",
+        action="append",
+        dest="gliner_labels",
+        metavar="LABEL",
+        help="GLiNER label (repeatable; default labels used if omitted)",
+    )
+    parser.add_argument(
+        "--gliner-threshold",
+        type=float,
+        default=None,
+        help="Minimum GLiNER score (0.0–1.0; preset or 0.5 default)",
+    )
+    parser.add_argument(
+        "--gliner-model-name",
+        default=None,
+        help="Hugging Face GLiNER model id (default: urchade/gliner_mediumv2.1)",
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="Overwrite existing sanitized outputs and batch report",
     )
 
 
@@ -312,6 +370,15 @@ def _cmd_anonymize_file(args: argparse.Namespace) -> int:
     return EXIT_SUCCESS
 
 
+def _cmd_anonymize_dir(args: argparse.Namespace) -> int:
+    try:
+        resolved = _anonymization_kwargs(args)
+    except MithrilVeilError as exc:
+        print(f"Error: {exc}", file=sys.stderr)
+        return EXIT_ERROR
+    return cmd_anonymize_dir(args, anonymization_kwargs=resolved)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="mithril-veil",
@@ -342,6 +409,42 @@ def build_parser() -> argparse.ArgumentParser:
     _add_common_anonymize_args(file_parser)
     file_parser.add_argument("--report", help="Optional safe JSON report path")
 
+    dir_parser = subparsers.add_parser(
+        "anonymize-dir",
+        help="Batch-anonymize supported files under a directory (replace/redact only)",
+    )
+    dir_parser.add_argument(
+        "input_dir",
+        help="Root directory to scan recursively for supported files",
+    )
+    dir_parser.add_argument(
+        "--output-dir",
+        required=True,
+        help="Directory for sanitized .anonymized.txt outputs (mirrors relative paths)",
+    )
+    _add_batch_anonymize_args(dir_parser)
+    dir_parser.add_argument(
+        "--report",
+        help="Optional aggregate safe JSON batch report path",
+    )
+    dir_parser.add_argument(
+        "--fail-fast",
+        action="store_true",
+        help="Stop batch on the first file processing failure",
+    )
+    dir_parser.add_argument(
+        "--include-hidden",
+        action="store_true",
+        help="Include hidden files and directories (default: skip)",
+    )
+    dir_parser.add_argument(
+        "--max-files",
+        type=int,
+        default=None,
+        metavar="N",
+        help="Abort if more than N supported files are found",
+    )
+
     return parser
 
 
@@ -355,6 +458,7 @@ def main(argv: list[str] | None = None) -> int:
         "anonymize-text": _cmd_anonymize_text,
         "anonymize-stdin": _cmd_anonymize_stdin,
         "anonymize-file": _cmd_anonymize_file,
+        "anonymize-dir": _cmd_anonymize_dir,
     }
 
     try:

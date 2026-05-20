@@ -38,6 +38,13 @@ Use this checklist when changing detection, I/O, logging, mapping, CI, or releas
 - [ ] Never commit contents of `data/private/`
 - [ ] VPS and local operators process files only on infrastructure they control
 
+## Batch CLI (`anonymize-dir`)
+
+- [ ] Batch supports **replace** and **redact** only; reject `pseudonymize` and `--mapping-output`
+- [ ] Output directory must not equal or sit inside the input directory
+- [ ] Aggregate batch report contains no raw text or detected values
+- [ ] Unsupported extensions are skipped with safe warnings only
+
 ## Cloud agents and third parties
 
 - [ ] Do not grant cloud coding agents or external automation access to private documents processed by your instance
