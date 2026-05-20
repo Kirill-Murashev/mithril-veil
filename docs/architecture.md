@@ -66,13 +66,15 @@ DOCX/PDF input produces **text output** only; layout is not preserved.
 
 ## Reversible pseudonymization (mapping)
 
+Canonical encryption module: **`app/security/encrypted_mapping.py`** (PBKDF2 + Fernet envelope, `.json.enc` only). In-memory mapping lives in **`app/core/mapping.py`**. There is no alternate production write path.
+
 | Surface | Mapping in memory | Mapping on disk | Report |
 |---------|-------------------|-----------------|--------|
 | API `pseudonymize` | Yes (per request) | No | N/A |
 | CLI `replace` / `redact` | No | No | No mapping block |
 | CLI `pseudonymize` | Yes | Only with `--mapping-output` (`.json.enc`) | `mapping.written` / `mapping.encrypted` only |
 
-Passphrase for encrypted mapping files comes from an environment variable (default `MITHRIL_VEIL_MAPPING_PASSPHRASE`). Original span text never appears in stdout, stderr, API JSON, or report JSON.
+Passphrase for encrypted mapping files comes from an environment variable (default `MITHRIL_VEIL_MAPPING_PASSPHRASE`, override `--mapping-passphrase-env`). Mapping output path must differ from input, anonymized output, and report paths. Original span text never appears in stdout, stderr, API JSON, or report JSON.
 
 ## CLI file flow
 

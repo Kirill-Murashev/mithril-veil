@@ -12,6 +12,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **Encrypted local mapping files** — CLI `--mapping-output` (`.json.enc` only) with passphrase from `MITHRIL_VEIL_MAPPING_PASSPHRASE` (override via `--mapping-passphrase-env`); refuse overwrite unless `--force`.
 - **Safe report mapping metadata** — reports may include only `mapping.written` and `mapping.encrypted` flags, never placeholder-to-original entries.
 
+### Changed
+
+- **Slice 8.1 hardening** — removed unused `app/security/mapping_io.py`; single canonical path `app/security/encrypted_mapping.py`; CLI refuses mapping path equal to input/output/report; expanded security regression tests for pseudonymize/mapping errors.
+
 ## [0.1.0] - 2026-05-20
 
 First public alpha release. Functionality was delivered in incremental slices:

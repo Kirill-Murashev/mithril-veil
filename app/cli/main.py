@@ -29,6 +29,7 @@ from app.core.presets import (
 from app.core.report import write_anonymization_report
 from app.core.schemas import AnonymizeMode, AnonymizeResponse
 from app.document_io import (
+    ensure_mapping_path_distinct,
     ensure_safe_mapping_path,
     ensure_safe_output_path,
     ensure_safe_report_path,
@@ -258,7 +259,14 @@ def _cmd_anonymize_file(args: argparse.Namespace) -> int:
     if args.report:
         ensure_safe_report_path(Path(args.report), force=force)
     if getattr(args, "mapping_output", None):
-        ensure_safe_mapping_path(Path(args.mapping_output), force=force)
+        mapping_path = Path(args.mapping_output)
+        ensure_safe_mapping_path(mapping_path, force=force)
+        ensure_mapping_path_distinct(
+            mapping_path,
+            input_path=input_path,
+            output_path=output_path,
+            report_path=Path(args.report) if args.report else None,
+        )
 
     try:
         content, source = read_document_file(input_path)

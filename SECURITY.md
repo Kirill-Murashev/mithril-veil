@@ -17,7 +17,7 @@ For contributor and release checks, see [docs/security_checklist.md](docs/securi
 
 Reversible anonymization mapping files must never be committed. Patterns such as `mapping*.json` and `mapping*.json.enc` are gitignored.
 
-CLI mapping output is **encrypted by default** (`.json.enc` envelope with PBKDF2 + Fernet). Store passphrases outside the repository (e.g. `MITHRIL_VEIL_MAPPING_PASSPHRASE`). Treat mapping files like key material: restrict filesystem permissions, do not attach to tickets or logs, and delete when no longer needed.
+CLI mapping output is **encrypted only** (`.json.enc` envelope with PBKDF2 + Fernet via `app/security/encrypted_mapping.py`). The HTTP API never writes or returns mapping data. Store passphrases **outside the repository** (e.g. `MITHRIL_VEIL_MAPPING_PASSPHRASE`); never commit passphrases or attach mapping files to issues, CI logs, or chat. Even encrypted mapping files are highly sensitive—treat them like key material: restrict filesystem permissions and delete when no longer needed.
 
 ## Local-first security model
 

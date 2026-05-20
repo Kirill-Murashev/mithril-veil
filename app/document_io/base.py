@@ -90,6 +90,26 @@ def ensure_safe_mapping_path(mapping_path: Path, *, force: bool) -> None:
         )
 
 
+def ensure_mapping_path_distinct(
+    mapping_path: Path,
+    *,
+    input_path: Path | None = None,
+    output_path: Path | None = None,
+    report_path: Path | None = None,
+) -> None:
+    """Refuse mapping output that would overwrite input, anonymized output, or report."""
+    resolved = mapping_path.resolve()
+    for label, other in (
+        ("input", input_path),
+        ("output", output_path),
+        ("report", report_path),
+    ):
+        if other is not None and other.resolve() == resolved:
+            raise UnsafeFileOperation(
+                f"Mapping path must not be the same as the {label} path: {mapping_path}."
+            )
+
+
 def read_document_file(path: Path) -> tuple[str, SourceMetadata]:
     """Read supported input document and return text plus safe source metadata."""
     file_size = check_input_file_size(path)

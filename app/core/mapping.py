@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -85,6 +86,12 @@ class ReversibleMapping:
 
     def __bool__(self) -> bool:
         return bool(self._entries)
+
+
+def serialize_mapping_payload_bytes(mapping: ReversibleMapping) -> bytes:
+    """UTF-8 JSON bytes of placeholder → original (for encrypted_mapping only)."""
+    payload = mapping.serialize_for_encryption()
+    return json.dumps(payload, ensure_ascii=False, indent=2).encode("utf-8")
 
 
 @dataclass
